@@ -1,7 +1,7 @@
 # 0004: WebSocket delivery with client acknowledgments
 
 ## Status
-Accepted
+Superseded by [0007](0007-display-only-stateless-company-scoped-relay.md)
 
 ## Context
 An announcement needs to reach the app promptly (payments happen live, at a till, with a customer

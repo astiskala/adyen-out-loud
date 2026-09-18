@@ -1,7 +1,7 @@
 # 0005: Correlate Display and Standard webhooks instead of trusting one
 
 ## Status
-Accepted
+Superseded by [0007](0007-display-only-stateless-company-scoped-relay.md)
 
 ## Context
 Adyen terminals send a Display notification (`TENDER_FINAL`) that the terminal itself considers

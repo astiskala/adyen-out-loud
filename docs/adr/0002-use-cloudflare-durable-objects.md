@@ -35,3 +35,7 @@ and lifecycle.
 - It also means an attacker who can generate arbitrary well-formed tokens can create arbitrary
   Durable Objects (each incurring at least the empty-schema storage cost) — see
   [`docs/threat-model.md`](../threat-model.md) for the abuse/cost analysis and mitigations.
+- As of [ADR 0007](0007-display-only-stateless-company-scoped-relay.md), `RelayObject` no longer
+  uses SQLite storage at all — the Durable Objects choice is retained purely for per-company
+  isolation and hibernatable-WebSocket connection fan-out (routing an ingested notification to the
+  connections tagged with the matching terminal serial), not for durable state.

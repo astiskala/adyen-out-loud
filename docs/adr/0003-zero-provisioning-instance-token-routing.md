@@ -1,7 +1,7 @@
 # 0003: Zero-provisioning instance-token routing
 
 ## Status
-Accepted
+Superseded by [0007](0007-display-only-stateless-company-scoped-relay.md)
 
 ## Context
 The project's usability goal is: install the app, get a webhook URL, paste it into Adyen, done —
