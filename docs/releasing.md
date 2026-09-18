@@ -12,16 +12,14 @@ as "CI already does this."
      semver for deployment, but keep it in sync with the app for release notes).
    - App: bump `ApplicationDisplayVersion` and `ApplicationVersion` in
      [`app/AdyenOutLoud/AdyenOutLoud.csproj`](../app/AdyenOutLoud/AdyenOutLoud.csproj).
-2. **Update [`CHANGELOG.md`](../CHANGELOG.md)** — move the relevant `Unreleased` entries under a
-   new version heading with today's date, following [Keep a Changelog](https://keepachangelog.com/).
-3. **Run the full quality suite** — `scripts/quality.sh` (or `.ps1`), plus the platform-specific
+2. **Run the full quality suite** — `scripts/quality.sh` (or `.ps1`), plus the platform-specific
    `dotnet build -f <tfm>` commands for every platform you can build locally. Every check in
    [`docs/quality.md`](quality.md)'s baseline table must pass; don't cut a release with a known-red
    check.
-4. **Platform builds** — verify (locally or by checking the latest `platform-builds.yml` run on
+3. **Platform builds** — verify (locally or by checking the latest `platform-builds.yml` run on
    the release commit) that Android, iOS, Mac Catalyst, and Windows all build in `Release`
    configuration.
-5. **Worker release**
+4. **Worker release**
    ```bash
    cd worker
    npm ci
@@ -31,13 +29,14 @@ as "CI already does this."
    [Cloudflare compatibility-date updates](#cloudflare-compatibility-date-updates) below — a
    compat-date change should already have been tested and merged well before a release, not bundled
    into one).
-6. **App release artifacts** — build signed packages per platform. **Signing is not configured in
+5. **App release artifacts** — build signed packages per platform. **Signing is not configured in
    this repository** (see [Signing requirements](#signing-requirements) below) — CI's
    `platform-builds.yml` deliberately proves the app *compiles* without needing any signing
    secrets; producing an installable, signed artifact is a separate, currently-manual step.
-7. **Tag and release notes** — create a Git tag (`vX.Y.Z`) and a GitHub Release whose body is the
-   matching `CHANGELOG.md` section.
-8. **Verify** — install the released app build and confirm it connects to the deployed Worker
+6. **Tag and release notes** — create a Git tag (`vX.Y.Z`) and a GitHub Release. This project has
+   no `CHANGELOG.md` — write the release notes directly from the commits/PRs included (e.g.
+   `gh release create vX.Y.Z --generate-notes`).
+7. **Verify** — install the released app build and confirm it connects to the deployed Worker
    end-to-end (see [`docs/adyen-setup.md`](adyen-setup.md) for the manual verification steps).
 
 ## Signing requirements
