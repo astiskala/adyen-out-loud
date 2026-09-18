@@ -13,6 +13,14 @@ export function pspReferenceFromTransactionId(transactionId: string): string | n
   return pspReference.length > 0 ? pspReference : null;
 }
 
+/** Adyen's POIID is `<model>-<serial>` (e.g. "V400m-324688170"); the app is configured with just
+ * the serial, so the Worker must derive the same substring to route correctly. */
+export function terminalSerialFromPoiId(poiId: string): string {
+  const separator = poiId.lastIndexOf("-");
+  if (separator < 0 || separator === poiId.length - 1) return poiId;
+  return poiId.slice(separator + 1);
+}
+
 /** Returns only final tender display state; all other valid Terminal API shapes are ignored. */
 export function parseDisplayNotification(value: unknown): DisplayState | null {
   const root = asObject(value);
@@ -39,6 +47,7 @@ export function parseDisplayNotification(value: unknown): DisplayState | null {
   return {
     pspReference,
     terminalId,
+    terminalSerial: terminalSerialFromPoiId(terminalId),
     transactionId,
     occurredAt,
     result,

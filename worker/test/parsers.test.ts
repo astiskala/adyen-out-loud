@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { asObject, asString } from "../src/adyen/json";
-import { parseDisplayNotification, pspReferenceFromTransactionId } from "../src/adyen/display-parser";
-import { parseStandardAuthorisations } from "../src/adyen/standard-webhook-parser";
-import { canonicalJson } from "../src/identity";
+import {
+  parseDisplayNotification,
+  pspReferenceFromTransactionId,
+  terminalSerialFromPoiId,
+} from "../src/adyen/display-parser";
 
 // Fast, dependency-free tests for the pure parsing/normalization helpers — no Workers runtime needed.
 // See docs/testing.md for how this file relates to the Durable Object integration tests in worker.test.ts.
@@ -26,6 +28,24 @@ describe("pspReferenceFromTransactionId", () => {
 
   it("uses the last dot when the transaction id contains several", () => {
     expect(pspReferenceFromTransactionId("a.b.c")).toBe("c");
+  });
+});
+
+describe("terminalSerialFromPoiId", () => {
+  it("returns the substring after the last hyphen", () => {
+    expect(terminalSerialFromPoiId("V400m-324688170")).toBe("324688170");
+  });
+
+  it("returns the substring after the last hyphen when there are several hyphens", () => {
+    expect(terminalSerialFromPoiId("V400m-EU-324688170")).toBe("324688170");
+  });
+
+  it("returns the whole value when there is no hyphen", () => {
+    expect(terminalSerialFromPoiId("324688170")).toBe("324688170");
+  });
+
+  it("returns the whole value when the hyphen is the last character", () => {
+    expect(terminalSerialFromPoiId("V400m-")).toBe("V400m-");
   });
 });
 
@@ -110,102 +130,10 @@ describe("parseDisplayNotification adversarial input", () => {
     const parsed = parseDisplayNotification(envelope(unicode));
     expect(parsed?.pspReference.length).toBeGreaterThan(0);
   });
-});
 
-describe("parseStandardAuthorisations adversarial input", () => {
-  it("returns an empty array for non-object, array, null, and missing notificationItems", () => {
-    expect(parseStandardAuthorisations(null)).toEqual([]);
-    expect(parseStandardAuthorisations(undefined)).toEqual([]);
-    expect(parseStandardAuthorisations([])).toEqual([]);
-    expect(parseStandardAuthorisations("x")).toEqual([]);
-    expect(parseStandardAuthorisations({})).toEqual([]);
-    expect(parseStandardAuthorisations({ notificationItems: "not-an-array" })).toEqual([]);
-  });
-
-  it("skips items with an unrecognized eventCode instead of throwing (forward compatibility)", () => {
-    expect(
-      parseStandardAuthorisations({
-        notificationItems: [{ NotificationRequestItem: { eventCode: "CAPTURE", pspReference: "x" } }],
-      }),
-    ).toEqual([]);
-  });
-
-  it("skips a malformed array entry but still parses a valid sibling", () => {
-    const result = parseStandardAuthorisations({
-      notificationItems: [
-        "not-an-object",
-        null,
-        {
-          NotificationRequestItem: {
-            eventCode: "AUTHORISATION",
-            pspReference: "PSP-OK",
-            eventDate: "2026-09-18T12:00:00+00:00",
-            success: "true",
-          },
-        },
-      ],
-    });
-    expect(result).toEqual([expect.objectContaining({ pspReference: "PSP-OK", successful: true })]);
-  });
-
-  it("throws for an AUTHORISATION item missing its pspReference or eventDate", () => {
-    expect(() =>
-      parseStandardAuthorisations({
-        notificationItems: [{ NotificationRequestItem: { eventCode: "AUTHORISATION" } }],
-      }),
-    ).toThrow();
-  });
-
-  it("treats a malformed amount as absent rather than throwing", () => {
-    const [result] = parseStandardAuthorisations({
-      notificationItems: [
-        {
-          NotificationRequestItem: {
-            eventCode: "AUTHORISATION",
-            pspReference: "PSP-1",
-            eventDate: "2026-09-18T12:00:00+00:00",
-            success: true,
-            amount: { currency: "SGD", value: "not-a-number" },
-          },
-        },
-      ],
-    });
-    expect(result?.amount).toBeNull();
-  });
-
-  it('accepts both boolean true and the string "true" for success, and treats anything else as failed', () => {
-    const notification = (success: unknown) => ({
-      notificationItems: [
-        {
-          NotificationRequestItem: {
-            eventCode: "AUTHORISATION",
-            pspReference: "PSP-1",
-            eventDate: "2026-09-18T12:00:00+00:00",
-            success,
-          },
-        },
-      ],
-    });
-    expect(parseStandardAuthorisations(notification(true))[0]?.successful).toBe(true);
-    expect(parseStandardAuthorisations(notification("true"))[0]?.successful).toBe(true);
-    expect(parseStandardAuthorisations(notification(false))[0]?.successful).toBe(false);
-    expect(parseStandardAuthorisations(notification("false"))[0]?.successful).toBe(false);
-    expect(parseStandardAuthorisations(notification(undefined))[0]?.successful).toBe(false);
-  });
-});
-
-describe("canonicalJson", () => {
-  it("produces the same string regardless of key order", () => {
-    expect(canonicalJson({ b: 1, a: 2 })).toBe(canonicalJson({ a: 2, b: 1 }));
-  });
-
-  it("is sensitive to actual value differences", () => {
-    expect(canonicalJson({ a: 1 })).not.toBe(canonicalJson({ a: 2 }));
-  });
-
-  it("canonicalizes nested objects and arrays deterministically", () => {
-    const left = { outer: { z: [3, { b: 1, a: 2 }], a: 1 } };
-    const right = { outer: { a: 1, z: [3, { a: 2, b: 1 }] } };
-    expect(canonicalJson(left)).toBe(canonicalJson(right));
+  it("includes the derived terminal serial alongside the full terminal id", () => {
+    const parsed = parseDisplayNotification(envelope(validReference));
+    expect(parsed?.terminalId).toBe("P400Plus-1");
+    expect(parsed?.terminalSerial).toBe("1");
   });
 });

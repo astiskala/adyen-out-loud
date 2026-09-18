@@ -1,25 +1,11 @@
 export interface DisplayState {
   pspReference: string;
   terminalId: string;
+  terminalSerial: string;
   transactionId: string;
   occurredAt: string;
   successful: boolean;
   result: string;
-}
-
-export interface AuthorisationState {
-  pspReference: string;
-  occurredAt: string;
-  successful: boolean;
-  paymentMethod: string | null;
-  amount: Amount | null;
-  terminalId: string | null;
-  transactionId: string | null;
-}
-
-interface Amount {
-  currency: string;
-  valueMinor: number;
 }
 
 interface PaymentMessage {
@@ -29,12 +15,10 @@ interface PaymentMessage {
   terminalId: string;
   transactionId: string;
   pspReference: string;
-  paymentMethod: string | null;
-  amount: Amount | null;
 }
 
 export interface OutboundEnvelope {
-  protocol: 1;
+  protocol: 2;
   message: PaymentMessage;
 }
 
