@@ -1241,6 +1241,7 @@
     "net10.0-android36.0/android-x64": {},
     "net10.0-android36.0/iossimulator-arm64": {},
     "net10.0-android36.0/maccatalyst-arm64": {},
+    "net10.0-android36.0/maccatalyst-x64": {},
     "net10.0-android36.0/win-arm64": {},
     "net10.0-ios26.5": {
       "Microsoft.Extensions.Logging.Debug": {
@@ -1434,6 +1435,7 @@
     "net10.0-ios26.5/android-x64": {},
     "net10.0-ios26.5/iossimulator-arm64": {},
     "net10.0-ios26.5/maccatalyst-arm64": {},
+    "net10.0-ios26.5/maccatalyst-x64": {},
     "net10.0-ios26.5/win-arm64": {},
     "net10.0-maccatalyst26.5": {
       "Microsoft.Extensions.Logging.Debug": {
@@ -1627,6 +1629,7 @@
     "net10.0-maccatalyst26.5/android-x64": {},
     "net10.0-maccatalyst26.5/iossimulator-arm64": {},
     "net10.0-maccatalyst26.5/maccatalyst-arm64": {},
+    "net10.0-maccatalyst26.5/maccatalyst-x64": {},
     "net10.0-maccatalyst26.5/win-arm64": {},
     "net10.0-windows10.0.19041": {
       "Microsoft.Extensions.Logging.Debug": {
@@ -2034,6 +2037,30 @@
       }
     },
     "net10.0-windows10.0.19041/maccatalyst-arm64": {
+      "Microsoft.Graphics.Win2D": {
+        "type": "Transitive",
+        "resolved": "1.4.0",
+        "contentHash": "/04yyf3xEOxeBK+SXxGB6OYLjXBVuujcLQF04mREcRcBT59IMI+oDbXOZZG2c/mJL8kKFC8r3wqz6MyA6IP3oA==",
+        "dependencies": {
+          "Microsoft.WindowsAppSDK.WinUI": "1.8.260204000"
+        }
+      },
+      "Microsoft.Web.WebView2": {
+        "type": "Transitive",
+        "resolved": "1.0.3179.45",
+        "contentHash": "3pokSH5CnN0G6rGhGFo1y87inxYhNxBQ2Vdf0wlvBj99KHxQJormjDACmqRnFeUsmuNFIhWwfAL1ztq7wD5qRA=="
+      },
+      "Microsoft.WindowsAppSDK.Foundation": {
+        "type": "Transitive",
+        "resolved": "1.8.260527000",
+        "contentHash": "zS6YwSkF+0z9Dr6iDoo/Rzh2bjt7DY3sQ0HNUrakcFwofW2DQJQPZj+36sx/An4Ms4X4EIah8QC318p2kfy/6Q==",
+        "dependencies": {
+          "Microsoft.WindowsAppSDK.Base": "1.8.251216001",
+          "Microsoft.WindowsAppSDK.InteractiveExperiences": "1.8.260525001"
+        }
+      }
+    },
+    "net10.0-windows10.0.19041/maccatalyst-x64": {
       "Microsoft.Graphics.Win2D": {
         "type": "Transitive",
         "resolved": "1.4.0",

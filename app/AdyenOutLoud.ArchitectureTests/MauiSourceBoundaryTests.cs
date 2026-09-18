@@ -48,10 +48,10 @@ public sealed class MauiSourceBoundaryTests
         {
             "new RelayConnectionService(",
             "new PaymentAnnouncementService(",
-            "new InstanceIdentityService(",
+            "new RelayConfigurationService(",
             "new ClientWebSocketConnection(",
             "new MauiSpeechService(",
-            "new SecureStorageTokenStore(",
+            "new SecureStorageRelayConfigurationStore(",
             "new PreferencesSettingsService(",
             "new ResxLocalizationService(",
         };
