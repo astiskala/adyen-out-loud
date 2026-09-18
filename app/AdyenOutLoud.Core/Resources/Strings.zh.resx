@@ -4,7 +4,6 @@
   <resheader name="version"><value>2.0</value></resheader>
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
-  <data name="PaymentReceived" xml:space="preserve"><value>已通过{1}收到{0}的付款。</value></data>
+  <data name="PaymentReceived" xml:space="preserve"><value>付款成功。</value></data>
   <data name="TestAnnouncement" xml:space="preserve"><value>Adyen Out Loud 已准备好播报付款。</value></data>
-  <data name="UnknownPaymentMethod" xml:space="preserve"><value>卡</value></data>
 </root>

@@ -4,7 +4,6 @@
   <resheader name="version"><value>2.0</value></resheader>
   <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
   <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
-  <data name="PaymentReceived" xml:space="preserve"><value>Bayaran sebanyak {0} diterima melalui {1}.</value></data>
+  <data name="PaymentReceived" xml:space="preserve"><value>Bayaran berjaya.</value></data>
   <data name="TestAnnouncement" xml:space="preserve"><value>Adyen Out Loud sedia untuk mengumumkan pembayaran.</value></data>
-  <data name="UnknownPaymentMethod" xml:space="preserve"><value>kad</value></data>
 </root>

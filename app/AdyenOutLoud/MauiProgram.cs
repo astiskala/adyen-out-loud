@@ -1,4 +1,3 @@
-using System.Reflection;
 using AdyenOutLoud.Abstractions;
 using AdyenOutLoud.Services;
 using AdyenOutLoud.ViewModels;
@@ -19,41 +18,25 @@ public static class MauiProgram
         builder.Logging.AddDebug();
 #endif
 
-        var relayUri = GetRelayUri();
         builder.Services.AddSingleton<IClock, SystemClock>();
         builder.Services.AddSingleton<IRetryDelay, TaskRetryDelay>();
         builder.Services.AddSingleton<ITextToSpeechService, MauiSpeechService>();
         builder.Services.AddSingleton<ILocalizationService, ResxLocalizationService>();
         builder.Services.AddSingleton<ISettingsService, PreferencesSettingsService>();
-        builder.Services.AddSingleton<IInstanceTokenStore, SecureStorageTokenStore>();
-        builder.Services.AddSingleton<IInstanceIdentityService>(provider =>
-            new InstanceIdentityService(relayUri, provider.GetRequiredService<IInstanceTokenStore>()));
+        builder.Services.AddSingleton<IRelayConfigurationStore, SecureStorageRelayConfigurationStore>();
+        builder.Services.AddSingleton<IRelayConfigurationService, RelayConfigurationService>();
         builder.Services.AddSingleton<IRelayConnectionFactory, ClientWebSocketConnectionFactory>();
         builder.Services.AddSingleton<IPaymentAnnouncementService, PaymentAnnouncementService>();
         builder.Services.AddSingleton<IRelayConnectionService>(provider => new RelayConnectionService(
-            provider.GetRequiredService<IInstanceIdentityService>(),
+            provider.GetRequiredService<IRelayConfigurationService>(),
             provider.GetRequiredService<IRelayConnectionFactory>(),
             provider.GetRequiredService<IPaymentAnnouncementService>(),
             provider.GetRequiredService<IRetryDelay>()));
+        builder.Services.AddSingleton<IBackgroundExecutionService, BackgroundExecutionService>();
         builder.Services.AddSingleton<AppLifecycleCoordinator>();
         builder.Services.AddSingleton<MainViewModel>();
         builder.Services.AddSingleton<MainPage>();
 
         return builder.Build();
-    }
-
-    private static Uri GetRelayUri()
-    {
-        var value = typeof(MauiProgram).Assembly
-            .GetCustomAttributes<AssemblyMetadataAttribute>()
-            .Single(attribute => attribute.Key == "RelayBaseUrl").Value;
-
-        if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps ||
-            uri.AbsolutePath != "/" || !string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment))
-        {
-            throw new InvalidOperationException("RelayBaseUrl must be an HTTPS origin without a path, query, or fragment.");
-        }
-
-        return uri;
     }
 }

@@ -4,7 +4,7 @@ using AdyenOutLoud.Models;
 namespace AdyenOutLoud.Services;
 
 public sealed class RelayConnectionService(
-    IInstanceIdentityService identityService,
+    IRelayConfigurationService configurationService,
     IRelayConnectionFactory connectionFactory,
     IPaymentAnnouncementService announcementService,
     IRetryDelay retryDelay) : IRelayConnectionService, IAsyncDisposable
@@ -68,15 +68,21 @@ public sealed class RelayConnectionService(
 
     private async Task RunAsync(CancellationToken cancellationToken)
     {
-        InstanceIdentity identity;
+        RelayConfiguration configuration;
         try
         {
-            identity = await identityService.GetAsync(cancellationToken).ConfigureAwait(false);
+            var found = await configurationService.GetAsync(cancellationToken).ConfigureAwait(false);
+            if (found is null)
+            {
+                SetStatus(RelayConnectionState.NeedsAttention, "Enter the relay URL and terminal serial number to start listening.");
+                return;
+            }
+            configuration = found;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch (Exception exception)
         {
-            SetStatus(RelayConnectionState.NeedsAttention, "Secure instance setup failed.");
+            SetStatus(RelayConnectionState.NeedsAttention, "Could not read the saved relay configuration.");
             Diagnostic?.Invoke(this, exception.Message);
             return;
         }
@@ -88,7 +94,7 @@ public sealed class RelayConnectionService(
             try
             {
                 SetStatus(RelayConnectionState.Connecting, "Connecting to the relay...");
-                await connection.ConnectAsync(identity.WebSocketUrl, cancellationToken).ConfigureAwait(false);
+                await connection.ConnectAsync(configuration.WebSocketUrl, cancellationToken).ConfigureAwait(false);
                 failures = 0;
                 SetStatus(RelayConnectionState.Listening, "Connected and waiting for payments.");
 
@@ -104,10 +110,6 @@ public sealed class RelayConnectionService(
 
                     var result = await announcementService.AnnounceAsync(payment, cancellationToken).ConfigureAwait(false);
                     Diagnostic?.Invoke(this, result.Detail);
-                    if (result.ShouldAcknowledge)
-                    {
-                        await connection.SendAsync(RelayProtocol.CreateAck(payment.Id), cancellationToken).ConfigureAwait(false);
-                    }
                 }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

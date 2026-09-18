@@ -3,9 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using AdyenOutLoud.Abstractions;
 using AdyenOutLoud.Models;
-using AdyenOutLoud.Services;
 using Microsoft.Maui.ApplicationModel;
-using Microsoft.Maui.ApplicationModel.DataTransfer;
 using Microsoft.Maui.Graphics;
 
 namespace AdyenOutLoud.ViewModels;
@@ -13,15 +11,16 @@ namespace AdyenOutLoud.ViewModels;
 public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly IRelayConnectionService _relay;
-    private readonly IInstanceIdentityService _identity;
+    private readonly IRelayConfigurationService _configuration;
     private readonly ITextToSpeechService _textToSpeech;
     private readonly ILocalizationService _localization;
     private readonly ISettingsService _settings;
     private readonly IPaymentAnnouncementService _announcements;
     private readonly SemaphoreSlim _initializationGate = new(1, 1);
     private bool _initialized;
-    private string _webhookUrl = "Preparing secure webhook URL...";
-    private string _copyStatus = string.Empty;
+    private string _relayUrlInput = string.Empty;
+    private string _terminalSerialInput = string.Empty;
+    private string _configurationStatus = string.Empty;
     private string _statusTitle = "CONNECTING";
     private string _statusDetail = "Preparing the payment listener...";
     private Color _statusColor = Color.FromArgb("#F7B955");
@@ -30,14 +29,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public MainViewModel(
         IRelayConnectionService relay,
-        IInstanceIdentityService identity,
+        IRelayConfigurationService configuration,
         ITextToSpeechService textToSpeech,
         ILocalizationService localization,
         ISettingsService settings,
         IPaymentAnnouncementService announcements)
     {
         _relay = relay;
-        _identity = identity;
+        _configuration = configuration;
         _textToSpeech = textToSpeech;
         _localization = localization;
         _settings = settings;
@@ -46,7 +45,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         relay.Diagnostic += OnDiagnostic;
         announcements.AnnouncementCompleted += OnAnnouncementCompleted;
         TestVoiceCommand = new AsyncCommand(TestVoiceAsync);
-        CopyWebhookCommand = new AsyncCommand(CopyWebhookAsync);
+        SaveConfigurationCommand = new AsyncCommand(SaveConfigurationAsync);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -57,6 +56,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 #pragma warning disable CA1822
     public IReadOnlyList<AppLanguage> Languages => AppLanguage.All;
 #pragma warning restore CA1822
+
+    public string FooterText { get; } = OperatingSystem.IsIOS()
+        ? "On iOS, keep Adyen Out Loud in the foreground while taking payments."
+        : "Adyen Out Loud keeps listening for payments while running in the background on this platform.";
 
     public AppLanguage SelectedLanguage
     {
@@ -69,15 +72,16 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public string WebhookUrl { get => _webhookUrl; private set => Set(ref _webhookUrl, value); }
-    public string CopyStatus { get => _copyStatus; private set => Set(ref _copyStatus, value); }
+    public string RelayUrlInput { get => _relayUrlInput; set => Set(ref _relayUrlInput, value); }
+    public string TerminalSerialInput { get => _terminalSerialInput; set => Set(ref _terminalSerialInput, value); }
+    public string ConfigurationStatus { get => _configurationStatus; private set => Set(ref _configurationStatus, value); }
     public string StatusTitle { get => _statusTitle; private set => Set(ref _statusTitle, value); }
     public string StatusDetail { get => _statusDetail; private set => Set(ref _statusDetail, value); }
     public Color StatusColor { get => _statusColor; private set => Set(ref _statusColor, value); }
     public string Diagnostic { get => _diagnostic; private set => Set(ref _diagnostic, value); }
     public string LatestEvent { get => _latestEvent; private set => Set(ref _latestEvent, value); }
     public ICommand TestVoiceCommand { get; }
-    public ICommand CopyWebhookCommand { get; }
+    public ICommand SaveConfigurationCommand { get; }
 
     public async Task InitializeAsync()
     {
@@ -86,15 +90,19 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         try
         {
             if (_initialized) return;
-            var instance = await _identity.GetAsync();
-            WebhookUrl = instance.WebhookUrl.AbsoluteUri;
+            var configuration = await _configuration.GetAsync();
+            if (configuration is not null)
+            {
+                RelayUrlInput = configuration.BaseUrl.AbsoluteUri;
+                TerminalSerialInput = configuration.TerminalSerial;
+            }
             _initialized = true;
         }
         catch (Exception exception)
         {
             StatusTitle = "NEEDS ATTENTION";
             StatusColor = Color.FromArgb("#FF6961");
-            StatusDetail = "Could not create the secure webhook URL.";
+            StatusDetail = "Could not read the saved relay configuration.";
             Diagnostic = exception.Message;
         }
         finally
@@ -103,12 +111,32 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private async Task CopyWebhookAsync()
+    private async Task SaveConfigurationAsync()
     {
-        await InitializeAsync();
-        if (!_initialized) return;
-        await Clipboard.Default.SetTextAsync(WebhookUrl);
-        CopyStatus = "Copied. Paste this same URL into both webhooks.";
+        if (!Uri.TryCreate(RelayUrlInput.Trim(), UriKind.Absolute, out var baseUrl))
+        {
+            ConfigurationStatus = "Enter a valid https:// relay URL.";
+            return;
+        }
+
+        var terminalSerial = TerminalSerialInput.Trim();
+        if (terminalSerial.Length == 0)
+        {
+            ConfigurationStatus = "Enter this device's terminal serial number.";
+            return;
+        }
+
+        try
+        {
+            await _relay.StopAsync();
+            await _configuration.SaveAsync(baseUrl, terminalSerial);
+            ConfigurationStatus = "Saved. Connecting...";
+            _relay.Start();
+        }
+        catch (Exception exception)
+        {
+            ConfigurationStatus = $"Could not save: {exception.Message}";
+        }
     }
 
     private async Task TestVoiceAsync()
@@ -149,11 +177,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private void OnAnnouncementCompleted(object? sender, AnnouncementResult result) => MainThread.BeginInvokeOnMainThread(() =>
     {
         var payment = result.Message;
-        var amount = payment.Amount is null
-            ? "Amount unavailable"
-            : CurrencyFormatter.Format(payment.Amount.ValueMinor, payment.Amount.Currency, SelectedLanguage);
-        var method = string.IsNullOrWhiteSpace(payment.PaymentMethod) ? "Unknown method" : PaymentMethodNames.Get(payment.PaymentMethod);
-        LatestEvent = $"{amount} / {method}\nTerminal {payment.TerminalId} / {payment.OccurredAt.ToLocalTime():g}\nTransaction {payment.TransactionId} / PSP {payment.PspReference}\nEvent {payment.Id}";
+        LatestEvent = $"Terminal {payment.TerminalId} / {payment.OccurredAt.ToLocalTime():g}\nTransaction {payment.TransactionId} / PSP {payment.PspReference}\nEvent {payment.Id}";
         Diagnostic = result.Speech?.Message ?? result.Detail;
     });
 

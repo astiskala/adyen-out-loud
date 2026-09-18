@@ -8,64 +8,49 @@ namespace AdyenOutLoud.Tests;
 public sealed class AnnouncementContractTests
 {
     [Fact]
-    public async Task NewEventIsPersistedBeforeSpeechAndThenAcknowledged()
+    public async Task NewEventIsPersistedThenLocalizedThenSpoken()
     {
         var calls = new List<string>();
         var service = Create(new Settings(calls), new Speech(calls), new Localization(calls));
         var result = await service.AnnounceAsync(Message(), CancellationToken.None);
 
         Assert.Equal(["persist", "localize", "speak"], calls);
-        Assert.True(result.ShouldAcknowledge);
         Assert.True(result.WasSpoken);
     }
 
     [Fact]
-    public async Task DuplicateEventIsAcknowledgedWithoutSpeech()
+    public async Task DuplicateEventIsNotSpokenAgain()
     {
         var calls = new List<string>();
         var service = Create(new Settings(calls, isNew: false), new Speech(calls), new Localization(calls));
         var result = await service.AnnounceAsync(Message(), CancellationToken.None);
 
         Assert.Equal(["persist"], calls);
-        Assert.True(result.ShouldAcknowledge);
         Assert.True(result.WasDuplicate);
         Assert.False(result.WasSpoken);
     }
 
     [Fact]
-    public async Task TextToSpeechFailureStillAcknowledgesPoisonMessage()
+    public async Task TextToSpeechFailureIsRecordedWithoutThrowing()
     {
         var calls = new List<string>();
         var service = Create(new Settings(calls), new FailingSpeech(calls), new Localization(calls));
         var result = await service.AnnounceAsync(Message(), CancellationToken.None);
 
         Assert.Equal(["persist", "localize", "speak"], calls);
-        Assert.True(result.ShouldAcknowledge);
         Assert.False(result.WasSpoken);
         Assert.Contains("voice failed", result.Detail, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public async Task NullAmountIsPersistedAndAcknowledgedWithoutSpeech()
-    {
-        var calls = new List<string>();
-        var service = Create(new Settings(calls), new Speech(calls), new Localization(calls));
-        var result = await service.AnnounceAsync(Message() with { Amount = null }, CancellationToken.None);
-
-        Assert.Equal(["persist"], calls);
-        Assert.True(result.ShouldAcknowledge);
-        Assert.False(result.WasSpoken);
-    }
-
-    [Fact]
-    public void FourLanguagesHaveIndependentResxAnnouncementsAndLocalizedFallbackMethod()
+    public void FourLanguagesHaveIndependentResxAnnouncements()
     {
         var localization = new ResxLocalizationService();
         Assert.Collection(AppLanguage.All,
-            language => Assert.StartsWith("Payment of", localization.CreatePaymentAnnouncement(Message() with { PaymentMethod = null }, language)),
-            language => Assert.StartsWith("已通过", localization.CreatePaymentAnnouncement(Message() with { PaymentMethod = null }, language)),
-            language => Assert.StartsWith("Bayaran sebanyak", localization.CreatePaymentAnnouncement(Message() with { PaymentMethod = null }, language)),
-            language => Assert.EndsWith("பெறப்பட்டது.", localization.CreatePaymentAnnouncement(Message() with { PaymentMethod = null }, language)));
+            language => Assert.Equal("Payment successful.", localization.CreatePaymentAnnouncement(Message(), language)),
+            language => Assert.Equal("付款成功。", localization.CreatePaymentAnnouncement(Message(), language)),
+            language => Assert.Equal("Bayaran berjaya.", localization.CreatePaymentAnnouncement(Message(), language)),
+            language => Assert.Equal("பணம் செலுத்துதல் வெற்றிகரமாக முடிந்தது.", localization.CreatePaymentAnnouncement(Message(), language)));
     }
 
     [Fact]
@@ -76,13 +61,6 @@ public sealed class AnnouncementContractTests
         {
             Assert.False(string.IsNullOrWhiteSpace(localization.CreateTestAnnouncement(language)));
         }
-    }
-
-    [Fact]
-    public void CreatingAnAnnouncementForAMessageWithNoAmountThrows()
-    {
-        var localization = new ResxLocalizationService();
-        Assert.Throws<ArgumentException>(() => localization.CreatePaymentAnnouncement(Message() with { Amount = null }, AppLanguage.English));
     }
 
     [Fact]
@@ -102,7 +80,7 @@ public sealed class AnnouncementContractTests
 
     internal static PaymentMessage Message() => new(
         "event-1", "payment_succeeded", DateTimeOffset.Parse("2026-09-18T12:00:00Z", CultureInfo.InvariantCulture),
-        "P400Plus-123", "txn-1", "PSP-1", "visa", new("SGD", 1050));
+        "P400Plus-123", "txn-1", "PSP-1");
 
     private sealed class Settings(List<string> calls, bool isNew = true) : ISettingsService
     {

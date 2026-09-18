@@ -22,12 +22,6 @@ public sealed class ClientWebSocketConnection : IRelayConnection
     public Task ConnectAsync(Uri uri, CancellationToken cancellationToken) =>
         _socket.ConnectAsync(uri, cancellationToken);
 
-    public Task SendAsync(string message, CancellationToken cancellationToken)
-    {
-        var bytes = Encoding.UTF8.GetBytes(message);
-        return _socket.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, cancellationToken);
-    }
-
     public async Task<string?> ReceiveAsync(CancellationToken cancellationToken)
     {
         var buffer = new byte[4096];

@@ -16,7 +16,6 @@
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">23.0</SupportedOSPlatformVersion>
     <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
     <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
-    <RelayBaseUrl Condition="'$(RelayBaseUrl)' == ''">https://relay.example.invalid</RelayBaseUrl>
 
     <!-- Fail the build on binding errors instead of discovering them at runtime; see docs/quality.md. -->
     <MauiStrictXamlCompilation>true</MauiStrictXamlCompilation>
@@ -29,10 +28,6 @@
     <MauiIcon Include="Resources/AppIcon/appicon.svg" Color="#0B1014" />
     <MauiSplashScreen Include="Resources/Splash/splash.svg" Color="#0B1014" BaseSize="256,256" />
     <MauiXaml Update="**/*.xaml" Generator="MSBuild:Compile" />
-    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-      <_Parameter1>RelayBaseUrl</_Parameter1>
-      <_Parameter2>$(RelayBaseUrl)</_Parameter2>
-    </AssemblyAttribute>
   </ItemGroup>
 
   <ItemGroup>

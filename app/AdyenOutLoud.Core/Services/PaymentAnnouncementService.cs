@@ -16,12 +16,7 @@ public sealed class PaymentAnnouncementService(
         var isNew = await settings.TryReserveEventIdAsync(message.Id, clock.UtcNow, cancellationToken).ConfigureAwait(false);
         if (!isNew)
         {
-            return Complete(new(message.Id, true, true, false, "Duplicate acknowledged without speech.", message, null));
-        }
-
-        if (message.Amount is null)
-        {
-            return Complete(new(message.Id, true, false, false, "Payment has no amount; acknowledged without speech.", message, null));
+            return Complete(new(message.Id, true, false, "Duplicate; not announced again.", message, null));
         }
 
         try
@@ -29,7 +24,7 @@ public sealed class PaymentAnnouncementService(
             var language = settings.SelectedLanguage;
             var text = localization.CreatePaymentAnnouncement(message, language);
             var diagnostic = await textToSpeech.SpeakAsync(text, language, cancellationToken).ConfigureAwait(false);
-            return Complete(new(message.Id, true, false, true, diagnostic.Message, message, diagnostic));
+            return Complete(new(message.Id, false, true, diagnostic.Message, message, diagnostic));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -37,7 +32,7 @@ public sealed class PaymentAnnouncementService(
         }
         catch (Exception exception)
         {
-            return Complete(new(message.Id, true, false, false, $"Payment recorded; voice failed: {exception.Message}", message, null));
+            return Complete(new(message.Id, false, false, $"Payment recorded; voice failed: {exception.Message}", message, null));
         }
     }
 
@@ -49,7 +44,7 @@ public sealed class PaymentAnnouncementService(
         }
         catch (Exception)
         {
-            // UI observers must never prevent the relay acknowledgment.
+            // UI observers must never prevent processing the next message.
         }
         return result;
     }

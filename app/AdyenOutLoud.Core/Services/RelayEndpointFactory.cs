@@ -1,28 +1,24 @@
-using AdyenOutLoud.Models;
-
 namespace AdyenOutLoud.Services;
 
 public static class RelayEndpointFactory
 {
-    public static InstanceIdentity Create(Uri relayBaseUrl, string token)
+    public static Uri CreateWebSocketUrl(Uri companyUrl, string terminalSerial)
     {
-        ArgumentNullException.ThrowIfNull(relayBaseUrl);
-        ArgumentException.ThrowIfNullOrWhiteSpace(token);
-        if (!relayBaseUrl.IsAbsoluteUri || relayBaseUrl.Scheme != Uri.UriSchemeHttps ||
-            relayBaseUrl.AbsolutePath != "/" || !string.IsNullOrEmpty(relayBaseUrl.Query) ||
-            !string.IsNullOrEmpty(relayBaseUrl.Fragment))
+        ArgumentNullException.ThrowIfNull(companyUrl);
+        ArgumentException.ThrowIfNullOrWhiteSpace(terminalSerial);
+        if (!companyUrl.IsAbsoluteUri || companyUrl.Scheme != Uri.UriSchemeHttps ||
+            !string.IsNullOrEmpty(companyUrl.Query) || !string.IsNullOrEmpty(companyUrl.Fragment))
         {
-            throw new ArgumentException("RelayBaseUrl must be an HTTPS origin without a path, query, or fragment.", nameof(relayBaseUrl));
+            throw new ArgumentException("The relay URL must be an HTTPS address with no query or fragment.", nameof(companyUrl));
         }
 
-        var escapedToken = Uri.EscapeDataString(token);
-        var webhookBuilder = new UriBuilder(relayBaseUrl) { Path = $"v1/i/{escapedToken}" };
-        var socketBuilder = new UriBuilder(relayBaseUrl)
+        var escapedSerial = Uri.EscapeDataString(terminalSerial);
+        var builder = new UriBuilder(companyUrl)
         {
             Scheme = "wss",
-            Port = relayBaseUrl.IsDefaultPort ? -1 : relayBaseUrl.Port,
-            Path = $"v1/i/{escapedToken}/ws"
+            Port = companyUrl.IsDefaultPort ? -1 : companyUrl.Port,
+            Path = $"{companyUrl.AbsolutePath.TrimEnd('/')}/t/{escapedSerial}/ws",
         };
-        return new(token, webhookBuilder.Uri, socketBuilder.Uri);
+        return builder.Uri;
     }
 }

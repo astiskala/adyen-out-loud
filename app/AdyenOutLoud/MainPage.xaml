@@ -31,21 +31,30 @@
                 </Border>
 
                 <VerticalStackLayout Spacing="14">
-                    <Label Text="CONNECT ADYEN WEBHOOKS" Style="{StaticResource SectionTitle}" />
-                    <Label Text="1. In the Adyen Customer Area, create a Display webhook.&#10;2. Paste the URL below as its server URL.&#10;3. Create a Standard webhook and paste the exact same URL." Style="{StaticResource Body}" />
-                    <Label Text="Use this exact same URL for both the Display and Standard webhooks." Style="{StaticResource Emphasis}" />
+                    <Label Text="RELAY CONFIGURATION" Style="{StaticResource SectionTitle}" />
+                    <Label Text="Ask whoever manages your Adyen account for the relay URL they configured as this company's Display webhook, then enter this specific device's terminal serial number below." Style="{StaticResource Body}" />
+                    <Label Text="RELAY URL" Style="{StaticResource FieldLabel}" />
                     <Border Style="{StaticResource InputBorder}">
-                        <Entry Text="{Binding WebhookUrl}"
-                               IsReadOnly="True"
+                        <Entry Text="{Binding RelayUrlInput}"
+                               Placeholder="https://relay.example.com/v1/c/..."
+                               Keyboard="Url"
                                TextColor="{StaticResource Paper}"
                                FontFamily="monospace"
-                               SemanticProperties.Description="Webhook URL" />
+                               SemanticProperties.Description="Relay URL" />
                     </Border>
-                    <Button Text="Copy webhook URL" Command="{Binding CopyWebhookCommand}"
-                            SemanticProperties.Description="Copy the webhook URL to the clipboard" />
-                    <Label Text="{Binding CopyStatus}" Style="{StaticResource Caption}" />
+                    <Label Text="TERMINAL SERIAL NUMBER" Style="{StaticResource FieldLabel}" />
+                    <Border Style="{StaticResource InputBorder}">
+                        <Entry Text="{Binding TerminalSerialInput}"
+                               Placeholder="324688170"
+                               TextColor="{StaticResource Paper}"
+                               FontFamily="monospace"
+                               SemanticProperties.Description="Terminal serial number" />
+                    </Border>
+                    <Button Text="Save" Command="{Binding SaveConfigurationCommand}"
+                            SemanticProperties.Description="Save the relay configuration" />
+                    <Label Text="{Binding ConfigurationStatus}" Style="{StaticResource Caption}" />
                     <Border Style="{StaticResource WarningPanel}">
-                        <Label Text="SECRET URL: Anyone with this URL can send payment announcements to this device. Do not share it outside your webhook configuration." Style="{StaticResource WarningText}" />
+                        <Label Text="SECRET URL: Anyone with this relay URL can send payment announcements to every terminal in this company. Share it only through your webhook configuration." Style="{StaticResource WarningText}" />
                     </Border>
                 </VerticalStackLayout>
 
@@ -81,6 +90,6 @@
             </VerticalStackLayout>
         </ScrollView>
 
-        <Label Grid.Row="2" Text="Keep Adyen Out Loud in the foreground while taking payments" Style="{StaticResource Footer}" />
+        <Label Grid.Row="2" Text="{Binding FooterText}" Style="{StaticResource Footer}" />
     </Grid>
 </ContentPage>

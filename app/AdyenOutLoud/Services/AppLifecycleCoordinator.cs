@@ -2,7 +2,7 @@ using AdyenOutLoud.Abstractions;
 
 namespace AdyenOutLoud.Services;
 
-public sealed class AppLifecycleCoordinator(IRelayConnectionService relayConnection)
+public sealed class AppLifecycleCoordinator(IRelayConnectionService relayConnection, IBackgroundExecutionService background)
 {
     private int _isForeground;
 
@@ -10,6 +10,7 @@ public sealed class AppLifecycleCoordinator(IRelayConnectionService relayConnect
     {
         if (Interlocked.Exchange(ref _isForeground, 1) == 0)
         {
+            _ = background.EnterForegroundAsync();
             relayConnection.Start();
         }
     }
@@ -18,7 +19,7 @@ public sealed class AppLifecycleCoordinator(IRelayConnectionService relayConnect
     {
         if (Interlocked.Exchange(ref _isForeground, 0) == 1)
         {
-            await relayConnection.StopAsync();
+            await background.EnterBackgroundAsync();
         }
     }
 }
