@@ -11,7 +11,9 @@ export default defineConfig({
       provider: "istanbul",
       include: ["src/**/*.ts"],
       exclude: ["src/index.ts"],
-      reporter: ["text", "text-summary", "html", "json-summary"],
+      // "lcov" is additive to the existing local-dev reporters above — SonarCloud's JS/TS analysis
+      // (.github/workflows/sonarcloud.yml) ingests coverage/lcov.info; nothing else reads it.
+      reporter: ["text", "text-summary", "html", "json-summary", "lcov"],
       thresholds: {
         // src/adyen/** is the critical pure logic (Display parsing, terminal-serial derivation);
         // src/relay-object.ts is Durable Object transport wiring around that logic, held to the

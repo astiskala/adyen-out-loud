@@ -41,6 +41,22 @@ this as a setup checklist, not a claim that these protections are live.
 - **Private vulnerability reporting** — enable in **Settings → Code security**; this is what makes
   the link in [`SECURITY.md`](../SECURITY.md) actually work.
 
+## SonarCloud
+
+[`.github/workflows/sonarcloud.yml`](../.github/workflows/sonarcloud.yml) and
+[`sonar-project.properties`](../sonar-project.properties) are wired up but inert until a human with
+SonarCloud admin access:
+
+1. Creates a SonarCloud organization and project pointed at this repository.
+2. Fills in `sonar.projectKey`/`sonar.organization` in `sonar-project.properties` with the real
+   values.
+3. Adds a `SONAR_TOKEN` repository secret (**Settings → Secrets and variables → Actions**).
+4. Pins the `SonarSource/sonarqube-scan-action` step in the workflow to a real, current release
+   SHA — it's left as a placeholder deliberately rather than a guessed version.
+
+Once configured, consider adding its check to the required-status-checks list in
+[Branch protection](#branch-protection-main) above.
+
 ## Actions
 
 - **Actions permissions** — restrict to the actions this project actually uses (or "Allow

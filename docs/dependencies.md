@@ -70,6 +70,15 @@ compiler — because a second parallel TypeScript install for a project this siz
 disproportionate to the compile-speed benefit. **Revisit this pin** once `typescript-eslint`
 publishes TS 7.1 support; bump `typescript` and remove this note when you do.
 
+### `vitest` 5
+
+`vitest` and `@vitest/coverage-istanbul` are held at `4.1.11`, not `^5.0.1`, as of 2026-09-19:
+`@cloudflare/vitest-plugin@1.1.13` (the current release) declares a peer dependency of
+`vitest: ^4.1.0`, so installing `vitest@5` alongside it produces an unresolved peer dependency and
+would break the Workers-runtime test integration this project's entire `worker.test.ts` suite
+depends on. **Revisit this pin** once `@cloudflare/vitest-plugin` publishes `vitest@5` support; bump
+`vitest` and `@vitest/coverage-istanbul` together and remove this note when you do.
+
 ## Update policy
 
 | What | How |

@@ -1,0 +1,53 @@
+name: SonarCloud
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sonarcloud-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: SonarCloud analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version-file: worker/.node-version
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - name: Worker coverage
+        working-directory: worker
+        run: |
+          npm ci
+          npm run test:coverage
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+      - name: .NET coverage
+        working-directory: app
+        run: |
+          dotnet restore AdyenOutLoud.slnx
+          dotnet workload install android
+          ../scripts/dotnet-coverage.sh
+      # NOTE TO WHOEVER SETS THIS UP: pin this to the current SonarSource scan action's released
+      # tag/SHA — check https://github.com/SonarSource/sonarqube-scan-action for the current major
+      # version before pinning; do not assume a version from memory (see AGENTS.md's
+      # version-sensitivity rule). This job is inert (fails cleanly at this step) until a real
+      # SONAR_TOKEN secret and sonar-project.properties values are configured — see
+      # docs/repository-settings.md.
+      - name: SonarCloud scan
+        uses: SonarSource/sonarqube-scan-action@REPLACE_WITH_CURRENT_PINNED_SHA
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

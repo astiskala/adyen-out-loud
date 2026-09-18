@@ -30,6 +30,7 @@ to.
 | Dependency vulnerabilities | NuGet audit at restore time, `NuGetAuditLevel=high` (fails the build) | `npm audit --audit-level=high` in CI |
 | Supply-chain review (PRs) | GitHub's `dependency-review-action`, `fail-on-severity: high` | (same workflow, both ecosystems) |
 | Dependency updates | Dependabot: NuGet, npm, GitHub Actions — weekly, grouped (see [`.github/dependabot.yml`](../.github/dependabot.yml)) | (same) |
+| Static analysis (second opinion) | SonarCloud (`.github/workflows/sonarcloud.yml`, `sonar-project.properties`) — not yet configured with a real project/org/token, see [`docs/repository-settings.md`](repository-settings.md) | (same workflow, both ecosystems) |
 
 ## Why this and not something else
 
