@@ -79,23 +79,23 @@ coverage correctly today. The current xUnit 2.9 + `Microsoft.NET.Test.Sdk` (VSTe
 against it as verified in this hardening pass. Revisit once the MTP v2 + coverage-extension
 combination has had time to stabilize in the wider ecosystem.
 
-## Baseline (last verified 2026-09-18)
+## Baseline (last verified 2026-09-19)
 
-Every check below was run against this repository's actual state as part of this hardening pass —
-not asserted from memory. See the final hardening report for exact commands and output; the
-summary:
+Every check below was run against this repository's actual state as part of the display-only/
+stateless/company-scoped relay change (see
+[ADR 0007](adr/0007-display-only-stateless-company-scoped-relay.md)) — not asserted from memory:
 
 - **Worker:** `npm run quality` (format check → lint → typecheck → `wrangler types --check` →
   architecture → dead-code → coverage) passes with 0 findings. `npm audit`: 0 vulnerabilities.
-  44 tests passing.
+  36 tests passing.
 - **.NET:** `AdyenOutLoud.Core`, `AdyenOutLoud.Tests`, `AdyenOutLoud.ArchitectureTests`, and the
   Android head build all build with 0 warnings/0 errors under `TreatWarningsAsErrors=true`.
-  `dotnet format --verify-no-changes` passes. 89 unit tests + 8 architecture tests passing.
-  Core coverage: 94.1% line / 87.5% branch (floor: 90%/85%).
+  `dotnet format --verify-no-changes` passes. 58 unit tests + 8 architecture tests passing.
+  Core coverage: 91.6% line / 87.2% branch (floor: 90%/85%).
 - **iOS, Mac Catalyst, Windows builds:** not locally verifiable in this environment (this
-  development machine's installed Xcode is ahead of what the .NET 10 iOS/macCatalyst workload
-  currently requires; Windows-only build tooling isn't available on macOS/Linux) — see
-  [`docs/development.md`](development.md) for the exact versions and
+  development machine's installed Xcode (27.0) is ahead of what the .NET 10 iOS/macCatalyst
+  workload currently requires (26.6); Windows-only build tooling isn't available on macOS/Linux) —
+  see [`docs/development.md`](development.md) for the exact versions and
   [`.github/workflows/platform-builds.yml`](../.github/workflows/platform-builds.yml) for how CI
   builds them on the correct OS per platform.
 

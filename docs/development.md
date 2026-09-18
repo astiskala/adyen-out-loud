@@ -87,17 +87,12 @@ npm run test:coverage   # same, with coverage thresholds enforced
 npm run dev              # local Worker dev server (wrangler dev)
 ```
 
-### `RelayBaseUrl`
+### Relay configuration
 
-The app's webhook/WebSocket origin is compiled in as assembly metadata, not read from a runtime
-config file (see [ADR 0003](adr/0003-zero-provisioning-instance-token-routing.md)):
-
-```bash
-dotnet build AdyenOutLoud.slnx -p:RelayBaseUrl=https://relay.example.com
-```
-
-It must be an HTTPS origin with no path, query, or fragment — `RelayEndpointFactory` and
-`MauiProgram.GetRelayUri()` both reject anything else at build/startup time.
+The app's relay URL and terminal serial number are entered at runtime, in the app's own UI, and
+stored in platform secure storage — there is no build-time property to set (see
+[ADR 0007](adr/0007-display-only-stateless-company-scoped-relay.md)). `RelayEndpointFactory` rejects
+anything that isn't an HTTPS address with no query or fragment when the installer saves it.
 
 ## One-command quality checks
 
@@ -122,8 +117,8 @@ in CI, not locally before every commit.
 
 ## Adyen configuration
 
-See [`docs/adyen-setup.md`](adyen-setup.md) for configuring the Display and Standard webhooks
-against a deployed Worker.
+See [`docs/adyen-setup.md`](adyen-setup.md) for configuring the Display webhook against a deployed
+Worker.
 
 ## Cloudflare deployment (local/manual)
 
