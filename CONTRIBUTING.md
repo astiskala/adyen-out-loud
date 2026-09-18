@@ -90,7 +90,7 @@ checklist.
 
 ## Security
 
-- Never log the instance token or the full webhook URL — see [`docs/security.md`](docs/security.md#logging-and-redaction).
+- Never log the company token or the full relay URL — see [`docs/security.md`](docs/security.md#logging-and-redaction).
 - Never commit credentials, real webhook URLs, signing material, or Cloudflare/Apple/Android
   credentials — see [`.gitignore`](.gitignore).
 - Never weaken TLS certificate validation.

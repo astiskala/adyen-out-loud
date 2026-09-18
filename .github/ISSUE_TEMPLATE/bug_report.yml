@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        **Please do not paste sensitive data.** Never include your webhook URL, instance token,
+        **Please do not paste sensitive data.** Never include your relay URL, company token,
         API keys, card/PAN numbers, or other payment details — sanitize logs before pasting them.
         If you believe you've found a *security* vulnerability, use
         [Private Vulnerability Reporting](../../security/advisories/new) instead of this form.
@@ -66,6 +66,6 @@ body:
     attributes:
       label: Relevant logs
       description: >
-        Sanitized logs only. Remove/redact the webhook URL, instance token, and any payment data
+        Sanitized logs only. Remove/redact the relay URL, company token, and any payment data
         before pasting.
       render: text

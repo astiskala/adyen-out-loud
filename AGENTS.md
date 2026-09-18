@@ -7,14 +7,15 @@ of them, please fix it).
 
 ## Project overview
 
-Adyen Out Loud turns a successful Adyen terminal payment into a spoken confirmation on a nearby
-device. A Cloudflare Worker receives Adyen's two independent webhook types (Display and Standard),
-correlates them per-instance in a Durable Object, and pushes a message over WebSocket to a .NET
+Adyen Out Loud turns a successful Adyen terminal payment into a spoken "Payment successful"
+confirmation on a nearby device. A Cloudflare Worker receives Adyen's Display webhook, routes it by
+company and terminal in a stateless Durable Object, and pushes a message over WebSocket to a .NET
 MAUI app (Android/iOS/macOS/Windows), which speaks it via on-device TTS in one of four languages
-(English, Chinese, Malay, Tamil). There is no backend account system — each app instance generates
-its own high-entropy token, which both identifies it and routes it to its own Durable Object. Read
+(English, Chinese, Malay, Tamil). There is no backend account system — one relay URL is generated
+per Adyen company account, and each app instance is configured with that URL plus its own terminal
+serial number, which together route it to the right connection. Read
 [`docs/architecture.md`](docs/architecture.md) before making any non-trivial change; read
-[`docs/threat-model.md`](docs/threat-model.md) before touching anything related to the instance
+[`docs/threat-model.md`](docs/threat-model.md) before touching anything related to the company
 token or webhook validation.
 
 ## Repository map
@@ -27,9 +28,8 @@ app/                          .NET MAUI solution
   AdyenOutLoud.ArchitectureTests/  Enforces the architecture rules below, in CI on every PR
 worker/                       Cloudflare Worker (TypeScript)
   src/index.ts                 HTTP entrypoint: validate, route, delegate — no business logic
-  src/relay-object.ts           Durable Object: SQLite schema, ingest, correlation trigger, alarm, WebSocket
-  src/adyen/                    Pure parsing/correlation/model logic — no Cloudflare imports
-  src/identity.ts               Pure hashing/canonicalization helpers
+  src/relay-object.ts           Durable Object: ingest, terminal-tagged WebSocket fan-out, no storage
+  src/adyen/                    Pure Display-parsing/model logic — no Cloudflare imports
   test/worker.test.ts            Integration tests (real Workers runtime via @cloudflare/vitest-plugin)
   test/parsers.test.ts           Fast unit tests for the pure logic above
 docs/                          Everything described below — read before assuming behavior
@@ -50,9 +50,8 @@ These are enforced by `AdyenOutLoud.ArchitectureTests` and `dependency-cruiser`
   dependencies come through constructor injection registered in `MauiProgram.cs`.
 - No production project may reference a test project; the project-reference graph must have no
   cycles.
-- `worker/src/adyen/**` and `worker/src/identity.ts` must never import Cloudflare infrastructure
-  (`cloudflare:*` modules, `src/index.ts`, `src/relay-object.ts`) — they must stay runnable in a
-  plain test host.
+- `worker/src/adyen/**` must never import Cloudflare infrastructure (`cloudflare:*` modules,
+  `src/index.ts`, `src/relay-object.ts`) — it must stay runnable in a plain test host.
 - `worker/src/adyen/*-parser.ts` must never import `src/index.ts`.
 - External JSON always starts as `unknown` (TypeScript) / is walked field-by-field via
   `JsonElement`/`JsonDocument` (C#) and validated before any typed value is trusted — never cast
@@ -150,8 +149,8 @@ Run, in this order, whatever subset applies to what you changed:
 
 - Every bug fix needs a regression test that fails before the fix and passes after, in the layer
   the bug actually lived in.
-- New business logic needs unit tests — in `AdyenOutLoud.Core` or `worker/src/adyen/**`/`identity.ts`,
-  never in the MAUI head project or `worker/src/index.ts` (see the architecture rules above).
+- New business logic needs unit tests — in `AdyenOutLoud.Core` or `worker/src/adyen/**`, never in
+  the MAUI head project or `worker/src/index.ts` (see the architecture rules above).
 - A change to an external boundary (a new/changed webhook field, a relay-protocol field) needs both
   a positive test and a negative/adversarial test (missing, wrong-typed, and where relevant,
   malicious values) — see [`docs/testing.md`](docs/testing.md) for the existing pattern to follow.
@@ -160,14 +159,14 @@ Run, in this order, whatever subset applies to what you changed:
 
 Never:
 
-- Log the instance token or the full webhook URL, at any log level, anywhere — see
+- Log the company token or the full relay URL, at any log level, anywhere — see
   [`docs/security.md#logging-and-redaction`](docs/security.md#logging-and-redaction) (there's a
   regression test for this on the Worker side; don't break it).
-- Commit credentials, a real webhook URL, signing material, or Cloudflare/Apple/Android secrets.
+- Commit credentials, a real relay URL, signing material, or Cloudflare/Apple/Android secrets.
 - Weaken or disable TLS certificate validation.
 - Bypass payload/input validation "to make a test pass" — the validation is the thing under test.
 - Use non-cryptographic randomness (`System.Random`, `Math.random()`) for anything security-relevant
-  — instance tokens use `RandomNumberGenerator`/`crypto.subtle`.
+  — company tokens use `RandomNumberGenerator`/`openssl rand`/`crypto.subtle`.
 
 ## Dependency policy
 
