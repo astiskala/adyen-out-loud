@@ -1,0 +1,36 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>13.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+
+    <!-- Reproducible restore: every project gets a packages.lock.json pinning exact resolved
+         versions (including transitive), and CI restores in locked mode so a drifted lock file
+         fails the build instead of silently resolving something different. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+
+    <!-- Warnings are real defects here, not noise: treat them as build failures everywhere. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <AnalysisMode>Recommended</AnalysisMode>
+
+    <!-- Security and reliability diagnostics get escalated beyond "recommended". -->
+    <WarningsNotAsErrors />
+    <NoWarn />
+
+    <!-- NuGet vulnerability auditing (see docs/security.md). High/critical advisories fail the build;
+         lower severities are still reported (as restore output) without blocking. -->
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>high</NuGetAuditLevel>
+  </PropertyGroup>
+
+  <!-- CA2007 (ConfigureAwait) does not apply to test projects; xunit has no sync context to deadlock on. -->
+  <PropertyGroup Condition="'$(IsTestProject)' == 'true'">
+    <NoWarn>$(NoWarn);CA2007</NoWarn>
+  </PropertyGroup>
+</Project>

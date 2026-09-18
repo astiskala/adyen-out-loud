@@ -1,0 +1,43 @@
+{
+  "name": "adyen-out-loud-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0 <25.0.0"
+  },
+  "packageManager": "npm@12.0.2",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "architecture": "depcruise src test --config .dependency-cruiser.cjs",
+    "deadcode": "knip",
+    "types:generate": "wrangler types",
+    "types:check": "wrangler types --check",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "quality": "npm run format:check && npm run lint && npm run typecheck && npm run types:check && npm run architecture && npm run deadcode && npm run test:coverage"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.1.12",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.1",
+    "@vitest/coverage-istanbul": "^4.1.11",
+    "dependency-cruiser": "^18.3.1",
+    "eslint": "^10.10.0",
+    "eslint-config-prettier": "^10.1.8",
+    "knip": "^6.37.0",
+    "prettier": "^3.9.8",
+    "typescript": "6.0.3",
+    "typescript-eslint": "^8.70.0",
+    "vitest": "^4.1.11",
+    "wrangler": "^4.134.0"
+  }
+}

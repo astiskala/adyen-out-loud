@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/OWNER/REPO/security/advisories/new # relative /security/advisories/new links aren't supported here; update OWNER/REPO once this repo has a remote.
+    about: Please report vulnerabilities privately instead of filing a public issue — see SECURITY.md.
+  - name: Merchant / Adyen account support
+    url: https://www.adyen.com/contact
+    about: This repository is not Adyen Support. For merchant account or payment issues, contact Adyen directly.

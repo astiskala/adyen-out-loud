@@ -1,0 +1,77 @@
+name: Platform builds
+
+# Compiles every MAUI target platform. No signing is configured or required — this only proves the
+# app compiles for each platform, using the GitHub-hosted OS that platform actually requires
+# (see docs/development.md for why iOS/macCatalyst need macos-15 and Windows needs windows-latest).
+
+on:
+  pull_request:
+    paths:
+      - "app/**"
+      - "global.json"
+      - "Directory.Build.props"
+      - "Directory.Packages.props"
+      - ".github/workflows/platform-builds.yml"
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platform-builds-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: Android
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+      - run: dotnet workload install android
+      - run: dotnet build AdyenOutLoud/AdyenOutLoud.csproj -f net10.0-android -c Release
+
+  ios-and-maccatalyst:
+    name: iOS + Mac Catalyst
+    runs-on: macos-15
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+      - name: Select the Xcode version .NET 10 for iOS/macCatalyst requires
+        run: |
+          # net10.0-ios/-maccatalyst currently require Xcode 26.6 (see docs/development.md).
+          # macos-15 runner images ship several Xcode versions side by side; select ours explicitly
+          # so a runner-image default bump can't silently change what we build against.
+          sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
+          xcodebuild -version
+      - run: dotnet workload install ios maccatalyst
+      - run: dotnet build AdyenOutLoud/AdyenOutLoud.csproj -f net10.0-ios -c Release
+      - run: dotnet build AdyenOutLoud/AdyenOutLoud.csproj -f net10.0-maccatalyst -c Release
+
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+      - run: dotnet workload install windows
+      - run: dotnet build AdyenOutLoud/AdyenOutLoud.csproj -f net10.0-windows10.0.19041.0 -c Release

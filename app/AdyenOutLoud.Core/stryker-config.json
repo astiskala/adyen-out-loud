@@ -1,0 +1,8 @@
+{
+  "stryker-config": {
+    "test-projects": ["../AdyenOutLoud.Tests/AdyenOutLoud.Tests.csproj"],
+    "reporters": ["html", "progress", "cleartext"],
+    "thresholds": { "high": 80, "low": 60, "break": 0 },
+    "concurrency": 1
+  }
+}

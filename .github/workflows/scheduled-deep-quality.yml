@@ -1,0 +1,47 @@
+name: Scheduled deep quality
+
+# Expensive checks that would make every PR slow: mutation testing on the critical pure-logic
+# projects, and (placeholders for) full UI smoke tests. See docs/testing.md for what each covers,
+# current mutation-score expectations, and how to run these locally.
+
+on:
+  schedule:
+    # Sundays at 04:00 UTC.
+    - cron: "0 4 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scheduled-deep-quality-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # Worker mutation testing (StrykerJS) is not wired up yet: as of 2026-09-18, @stryker-mutator's
+  # instrumenter pulls in a Babel 8.0.6 line with an internal version skew (some @babel/* packages
+  # at 8.0.6 depend on siblings that npm cannot resolve), so `npm install` fails outright. This is
+  # an upstream publishing issue, not a config problem — retry once the Babel 8.0.x releases settle
+  # (see docs/testing.md, "Mutation testing").
+  mutation-dotnet:
+    name: Mutation testing — .NET Core domain logic
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+      - run: dotnet tool restore
+      - run: dotnet tool run dotnet-stryker --test-project ../AdyenOutLoud.Tests/AdyenOutLoud.Tests.csproj
+        working-directory: app/AdyenOutLoud.Core
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dotnet-mutation-report
+          path: app/AdyenOutLoud.Core/StrykerOutput
+          retention-days: 30
+          if-no-files-found: ignore

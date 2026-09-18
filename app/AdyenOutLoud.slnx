@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="AdyenOutLoud.Core/AdyenOutLoud.Core.csproj" />
+  <Project Path="AdyenOutLoud/AdyenOutLoud.csproj" />
+  <Project Path="AdyenOutLoud.Tests/AdyenOutLoud.Tests.csproj" />
+  <Project Path="AdyenOutLoud.ArchitectureTests/AdyenOutLoud.ArchitectureTests.csproj" />
+</Solution>

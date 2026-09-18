@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="AdyenOutLoud.MainPage"
+    x:DataType="vm:MainViewModel"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:AdyenOutLoud.ViewModels"
+    xmlns:models="clr-namespace:AdyenOutLoud.Models;assembly=AdyenOutLoud.Core"
+    BackgroundColor="{StaticResource Ink}">
+    <Grid RowDefinitions="Auto,*,Auto">
+        <BoxView HeightRequest="5" Color="{StaticResource AdyenGreen}" VerticalOptions="Start" />
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="24,36,24,32" Spacing="28" MaximumWidthRequest="760" HorizontalOptions="Center">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="ADYEN" Style="{StaticResource Eyebrow}" />
+                    <Label Text="Out Loud" Style="{StaticResource Hero}" />
+                    <Label Text="Turn successful terminal payments into instant spoken confirmations." Style="{StaticResource Subtitle}" />
+                </VerticalStackLayout>
+
+                <Border Style="{StaticResource Panel}">
+                    <VerticalStackLayout Spacing="10">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+                            <BoxView WidthRequest="12" HeightRequest="12" Color="{Binding StatusColor}" CornerRadius="6" VerticalOptions="Center"
+                                     AutomationProperties.IsInAccessibleTree="False" />
+                            <Label Grid.Column="1" Text="{Binding StatusTitle}" Style="{StaticResource StatusTitle}" />
+                        </Grid>
+                        <Label Text="{Binding StatusDetail}" Style="{StaticResource Body}" />
+                        <Label Text="CONNECTING  /  LISTENING  /  NEEDS ATTENTION" Style="{StaticResource StateLegend}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="CONNECT ADYEN WEBHOOKS" Style="{StaticResource SectionTitle}" />
+                    <Label Text="1. In the Adyen Customer Area, create a Display webhook.&#10;2. Paste the URL below as its server URL.&#10;3. Create a Standard webhook and paste the exact same URL." Style="{StaticResource Body}" />
+                    <Label Text="Use this exact same URL for both the Display and Standard webhooks." Style="{StaticResource Emphasis}" />
+                    <Border Style="{StaticResource InputBorder}">
+                        <Entry Text="{Binding WebhookUrl}"
+                               IsReadOnly="True"
+                               TextColor="{StaticResource Paper}"
+                               FontFamily="monospace"
+                               SemanticProperties.Description="Webhook URL" />
+                    </Border>
+                    <Button Text="Copy webhook URL" Command="{Binding CopyWebhookCommand}"
+                            SemanticProperties.Description="Copy the webhook URL to the clipboard" />
+                    <Label Text="{Binding CopyStatus}" Style="{StaticResource Caption}" />
+                    <Border Style="{StaticResource WarningPanel}">
+                        <Label Text="SECRET URL: Anyone with this URL can send payment announcements to this device. Do not share it outside your webhook configuration." Style="{StaticResource WarningText}" />
+                    </Border>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="ANNOUNCEMENT LANGUAGE" Style="{StaticResource FieldLabel}" />
+                    <Border Style="{StaticResource InputBorder}">
+                        <Picker ItemsSource="{Binding Languages}"
+                                ItemDisplayBinding="{Binding DisplayName, x:DataType=models:AppLanguage}"
+                                SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}"
+                                TextColor="{StaticResource Paper}"
+                                Title="Choose one of four languages"
+                                TitleColor="{StaticResource Muted}"
+                                SemanticProperties.Description="Announcement language" />
+                    </Border>
+                    <Label Text="VOICE CHECK" Style="{StaticResource FieldLabel}" Margin="0,8,0,0" />
+                    <Button Text="Test voice" Command="{Binding TestVoiceCommand}"
+                            SemanticProperties.Description="Speak a test announcement in the selected language" />
+                </VerticalStackLayout>
+
+                <Border Style="{StaticResource Panel}">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="LATEST EVENT" Style="{StaticResource FieldLabel}" />
+                        <Label Text="{Binding LatestEvent}" Style="{StaticResource LatestEvent}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border Style="{StaticResource DiagnosticPanel}">
+                    <VerticalStackLayout Spacing="7">
+                        <Label Text="VOICE FALLBACK DIAGNOSTIC" Style="{StaticResource FieldLabel}" />
+                        <Label Text="{Binding Diagnostic}" Style="{StaticResource Diagnostic}" />
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Label Grid.Row="2" Text="Keep Adyen Out Loud in the foreground while taking payments" Style="{StaticResource Footer}" />
+    </Grid>
+</ContentPage>

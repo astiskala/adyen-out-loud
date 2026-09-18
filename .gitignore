@@ -1,0 +1,54 @@
+# --- Local agent worktrees ---
+.worktrees/
+
+# --- .NET / MAUI ---
+bin/
+obj/
+*.user
+*.userosscache
+*.suo
+.vs/
+.vscode/*
+!.vscode/extensions.json
+*.binlog
+*.dotCover
+TestResults/
+coverage/
+StrykerOutput/
+**/*.trx
+**/*.cobertura.xml
+
+# Android / iOS / MacCatalyst signing material — never commit these.
+*.keystore
+*.jks
+*.mobileprovision
+*.p12
+*.pfx
+*.cer
+*.certSigningRequest
+Platforms/**/GoogleService-Info.plist
+Platforms/**/google-services.json
+
+# --- Node / Cloudflare Worker ---
+node_modules/
+worker/.wrangler/
+worker/coverage/
+worker/dist/
+.wrangler/
+npm-debug.log*
+
+# --- Editors / OS ---
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+*.iml
+
+# --- Secrets / local overrides (never commit) ---
+.env
+.env.*
+!.env.example
+*.local
+
+# --- Generated reports (reproducible from source; not checked in) ---
+/artifacts/

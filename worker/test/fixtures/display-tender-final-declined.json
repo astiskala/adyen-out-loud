@@ -1,0 +1,17 @@
+{
+  "SaleToPOIRequest": {
+    "MessageHeader": {
+      "MessageCategory": "Display",
+      "MessageClass": "Device",
+      "MessageType": "Request",
+      "POIID": "V400m-324688170",
+      "ProtocolVersion": "3.0",
+      "SaleID": "POSSystemID12345",
+      "ServiceID": "201"
+    },
+    "DisplayRequest": {
+      "DisplayOutput": [],
+      "ReferenceID": "event=TENDER_FINAL&result=DECLINED&TimeStamp=2026-09-18T12%3A01%3A00.000Z&TransactionID=CWf3001626182367000.DECLINEDPSP0001"
+    }
+  }
+}

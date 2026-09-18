@@ -1,0 +1,71 @@
+name: Bug report
+description: Something in the app or Worker isn't working as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Please do not paste sensitive data.** Never include your webhook URL, instance token,
+        API keys, card/PAN numbers, or other payment details — sanitize logs before pasting them.
+        If you believe you've found a *security* vulnerability, use
+        [Private Vulnerability Reporting](../../security/advisories/new) instead of this form.
+
+  - type: input
+    id: app-version
+    attributes:
+      label: App version
+      description: Shown on the app's about/settings area, or the release tag you installed.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Android
+        - iOS
+        - macOS (Mac Catalyst)
+        - Windows
+        - Cloudflare Worker only
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: OS version
+      placeholder: e.g. Android 15, iOS 18.1, Windows 11 24H2
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps, as precise as you can make them.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: >
+        Sanitized logs only. Remove/redact the webhook URL, instance token, and any payment data
+        before pasting.
+      render: text
