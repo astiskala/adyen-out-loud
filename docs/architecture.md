@@ -46,11 +46,8 @@ WebSocket: wss://<worker-host>/v1/c/<companyToken>/t/<terminalSerial>/ws
 
 The Worker never stores a token-to-Durable-Object mapping table. It derives the Durable Object's
 name deterministically as `SHA-256(companyToken)` (base64url), then calls
-`env.PAYMENT_CHANNELS.idFromName(name)` — the same zero-provisioning mechanism
-[ADR 0003](adr/0003-zero-provisioning-instance-token-routing.md) originally established, just with
-"company" as the routing unit instead of "instance." The first request for a given token causes
-Cloudflare to create that Durable Object; every later request for the same token routes to the same
-object. Within that object, each terminal's WebSocket connection is tagged with its terminal serial
+`env.PAYMENT_CHANNELS.idFromName(name)`. The first request for a given token causes Cloudflare to
+create that Durable Object; every later request for the same token routes to the same object. Within that object, each terminal's WebSocket connection is tagged with its terminal serial
 (Cloudflare's hibernatable-WebSocket tag API — see below); ingesting a notification fans it out only
 to the connection(s) tagged with the matching serial, which the Worker recovers from the
 notification's `POIID` field. See [`docs/threat-model.md`](threat-model.md) for what this design
@@ -78,8 +75,7 @@ used to enumerate valid tokens.
 ## Durable Object ([`worker/src/relay-object.ts`](../worker/src/relay-object.ts))
 
 One `RelayObject` per company token — see [ADR 0002](adr/0002-use-cloudflare-durable-objects.md).
-As of [ADR 0007](adr/0007-display-only-stateless-company-scoped-relay.md) it holds **no durable
-state at all**: no SQLite tables, no alarm, nothing written to storage. `fetch()` handles two
+It holds **no durable state at all**: no SQLite tables, no alarm, nothing written to storage. `fetch()` handles two
 internal routes:
 
 - `POST /ingest` — parses the Display webhook body; if it's a successful `TENDER_FINAL`, derives
@@ -144,10 +140,10 @@ platform under `Platforms/<X>/BackgroundExecutionService.cs` and wired into
   foreground.
 - **Windows and Mac Catalyst** are no-ops: desktop apps aren't suspended when minimized, so the
   relay connection is simply never stopped on background/foreground transitions.
-- **iOS** stops the relay connection on background and reconnects on foreground, exactly as before
-  this capability existed — true background WebSocket listening on iOS would require the "audio"
-  background mode, which Apple can reject for an app not playing continuous audio; this project
-  stays foreground-only there by deliberate choice rather than risk that workaround.
+- **iOS** stops the relay connection on background and reconnects on foreground — true background
+   WebSocket listening on iOS would require the "audio" background mode, which Apple can reject for
+   an app not playing continuous audio; this project stays foreground-only there by deliberate
+   choice rather than risk that workaround.
 
 ## Dependency direction
 

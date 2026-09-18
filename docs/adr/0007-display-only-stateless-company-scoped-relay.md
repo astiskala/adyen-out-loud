@@ -4,24 +4,20 @@
 Accepted
 
 ## Context
-Three constraints changed at once, all pointing the same direction:
+Three constraints define the current architecture:
 
 1. Adyen's Display `TENDER_FINAL` notification never carries payment method or amount (only
    approval result, terminal ID, transaction ID, and timestamp) — see
    [`worker/src/adyen/display-parser.ts`](../../worker/src/adyen/display-parser.ts). The Standard
-   `AUTHORISATION` webhook (previously correlated in, per
-   [ADR 0005](0005-correlate-display-and-standard-webhooks.md)) was the only source of that data.
-   Relying on Display alone means every announcement is the same generic "payment successful" —
-   there is nothing left to correlate.
+   `AUTHORISATION` webhook is not used. Relying on Display alone means every announcement is the
+   same generic "payment successful" — there is nothing to correlate.
 2. Whoever installs the app on a given terminal often has no Adyen Customer Area access at all
-   (e.g., a submerchant of a payment-facilitator partner) — the original per-instance-token model
-   (each app instance generating its own token and needing its own webhook configured against it,
-   per [ADR 0003](0003-zero-provisioning-instance-token-routing.md)) assumed webhook-configuration
-   access that doesn't exist for every deployer.
-3. With nothing left to correlate and no requirement to survive a disconnected period (see
-   Decision below), the durable state that [ADR 0002](0002-use-cloudflare-durable-objects.md) and
-   [ADR 0004](0004-websocket-delivery-and-acknowledgements.md) existed to serve — correlation state,
-   a replay queue, at-least-once delivery with acknowledgments — no longer has a job to do.
+   (e.g., a submerchant of a payment-facilitator partner). The app is configured with a
+   company-wide relay URL and a user-entered terminal serial number — no Customer Area access is
+   needed to install and configure the app.
+3. With nothing to correlate and no requirement to survive a disconnected period (see Decision
+   below), no durable state is needed — no correlation state, no replay queue, no at-least-once
+   delivery with acknowledgments.
 
 ## Decision
 - **Display-only.** The Worker only ever ingests Display `TENDER_FINAL` notifications. A successful
@@ -38,12 +34,11 @@ Three constraints changed at once, all pointing the same direction:
   and configure the app itself. The Worker recovers the same serial from the webhook's `POIID`
   field (`<model>-<serial>`, e.g. `V400m-324688170` -> `324688170`) to know which connected
   terminal(s) to notify.
-- **One Durable Object per company**, not per terminal — routed the same way ADR 0003 already
-  routed per-instance objects (`SHA-256(companyToken)` as the object name), just with "company"
-  instead of "instance" as the unit. Within that object, each terminal's WebSocket connection is
-  tagged with its terminal serial via Cloudflare's hibernatable-WebSocket tag API
-  (`ctx.acceptWebSocket(socket, [terminalSerial])` / `ctx.getWebSockets(terminalSerial)`), which is
-  what fans an ingested notification out to only the matching terminal's connection(s).
+- **One Durable Object per company**, not per terminal — routed by `SHA-256(companyToken)` as the
+   object name. Within that object, each terminal's WebSocket connection is tagged with its terminal
+   serial via Cloudflare's hibernatable-WebSocket tag API (`ctx.acceptWebSocket(socket,
+   [terminalSerial])` / `ctx.getWebSockets(terminalSerial)`), which fans an ingested notification
+   out to only the matching terminal's connection(s).
 - **No persistence, anywhere.** The Durable Object holds no SQLite tables at all. A Display
   notification is parsed and, if successful, pushed directly to whatever sockets are currently
   connected and tagged with the matching terminal serial. If no device for that terminal is
@@ -71,10 +66,9 @@ Three constraints changed at once, all pointing the same direction:
 - Installing the app no longer requires Adyen Customer Area access; only whoever configures the
   company's Display webhook once needs it. This directly serves partner/submerchant deployments
   that motivated this change.
-- The relay URL is now a bearer secret shared across an entire company's terminals rather than one
-  device — a leaked URL has a larger blast radius than before (every terminal in the company, not
-  one device). See [`docs/threat-model.md`](../threat-model.md) for the full discussion.
+- The relay URL is a bearer secret shared across an entire company's terminals — a leaked URL
+   affects every terminal in the company. See [`docs/threat-model.md`](../threat-model.md) for the
+   full discussion.
 - The Durable Object class (`RelayObject`) and its Cloudflare Durable Objects infrastructure choice
-  from [ADR 0002](0002-use-cloudflare-durable-objects.md) are unchanged and still the right fit —
-  only its storage usage is removed; the per-company isolation and hibernatable-WebSocket delivery
-  reasoning in ADR 0002 still holds.
+   from [ADR 0002](0002-use-cloudflare-durable-objects.md) are unchanged and still the right fit.
+   The per-company isolation and hibernatable-WebSocket delivery reasoning in ADR 0002 still holds.

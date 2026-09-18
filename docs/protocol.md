@@ -40,8 +40,8 @@ platform-specific background/foreground behavior).
   message is the same generic "payment successful" announcement. Every field shown above is
   required and non-empty.
 - The Worker never queues or replays messages: a client that connects after a notification was
-  ingested does not receive it. See
-  [ADR 0007](adr/0007-display-only-stateless-company-scoped-relay.md) for why.
+   ingested does not receive it. See [ADR 0007](adr/0007-display-only-stateless-company-scoped-relay.md)
+   for why.
 
 ## Client → server
 
@@ -57,7 +57,6 @@ server-side state left for an acknowledgment to reconcile against.
 - **A structurally incompatible protocol version must never be partially interpreted.** If Worker
   and app disagree on `protocol`, the correct behavior is "ignore and keep listening," not "try to
   read the fields anyway."
-- Changing the *meaning* of an existing field, or removing one, requires bumping `protocol` (as this
-  project did, `1` → `2`, when `paymentMethod`/`amount` were removed and the client ACK was
-  dropped) and keeping both the old and new shapes understood by the server for as long as any
-  deployed client might still send the old one (there is no forced-upgrade mechanism).
+- Changing the *meaning* of an existing field, or removing one, requires bumping `protocol` and
+   keeping both the old and new shapes understood by the server for as long as any deployed client
+   might still send the old one (there is no forced-upgrade mechanism).

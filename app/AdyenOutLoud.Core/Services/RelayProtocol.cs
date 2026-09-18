@@ -3,8 +3,17 @@ using AdyenOutLoud.Models;
 
 namespace AdyenOutLoud.Services;
 
+/// <summary>
+/// Parses and validates the relay protocol envelope.
+/// </summary>
 public static class RelayProtocol
 {
+    /// <summary>
+    /// Attempts to parse a JSON string as a payment success envelope.
+    /// </summary>
+    /// <param name="json">The JSON string to parse.</param>
+    /// <param name="payment">The parsed payment message, if successful.</param>
+    /// <returns>True if the JSON is a valid payment success envelope; otherwise, false.</returns>
     public static bool TryParsePayment(string json, out PaymentMessage? payment)
     {
         payment = null;

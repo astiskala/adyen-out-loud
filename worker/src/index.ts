@@ -2,6 +2,7 @@ import { RelayObject } from "./relay-object";
 
 export { RelayObject };
 
+/** Maximum request body size in bytes (64 KiB). */
 export const MAX_BODY_BYTES = 64 * 1024;
 const COMPANY_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
 const TERMINAL_SERIAL_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
@@ -38,6 +39,12 @@ async function digest(value: string): Promise<string> {
   return base64Url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)));
 }
 
+/**
+ * Derives a deterministic Durable Object name from a company token.
+ * Uses SHA-256 hash of the token, encoded as base64url.
+ * @param {string} token - The company token (base64url-encoded 32-byte value).
+ * @returns {Promise<string>} The deterministic object name for the company's Durable Object.
+ */
 export async function companyTokenToObjectName(token: string): Promise<string> {
   return digest(token);
 }
@@ -73,6 +80,12 @@ async function relay(env: Env, companyToken: string): Promise<DurableObjectStub>
   return env.PAYMENT_CHANNELS.get(env.PAYMENT_CHANNELS.idFromName(name));
 }
 
+/**
+ * Cloudflare Worker entry point handling:
+ * - GET /health: Health check endpoint.
+ * - POST /v1/c/{companyToken}: Ingest webhook from Adyen.
+ * - GET /v1/c/{companyToken}/t/{terminalSerial}/ws: WebSocket upgrade for terminal.
+ */
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);

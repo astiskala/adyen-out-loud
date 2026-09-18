@@ -2,6 +2,12 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import eslintConfigPrettier from "eslint-config-prettier";
+import jsdoc from "eslint-plugin-jsdoc";
+
+const jsdocPlugin = {
+  plugins: { jsdoc },
+  rules: jsdoc.configs.recommended.rules,
+};
 
 export default tseslint.config(
   {
@@ -50,6 +56,26 @@ export default tseslint.config(
       // Unused code and unsafe `any` leakage are correctness signals, not style.
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
       "no-console": ["warn", { allow: ["error"] }],
+
+      // JSDoc enforcement for exported APIs.
+      "jsdoc/require-jsdoc": [
+        "error",
+        {
+          publicOnly: true,
+          require: {
+            FunctionDeclaration: true,
+            MethodDefinition: true,
+            ClassDeclaration: true,
+            ArrowFunctionExpression: true,
+            FunctionExpression: true,
+          },
+          contexts: ["TSInterfaceDeclaration", "TSTypeAliasDeclaration", "TSEnumDeclaration"],
+        },
+      ],
+      "jsdoc/require-param": "error",
+      "jsdoc/require-returns": "error",
+      "jsdoc/require-param-description": "error",
+      "jsdoc/require-returns-description": "error",
     },
   },
   {
@@ -58,7 +84,10 @@ export default tseslint.config(
       // Test fixtures intentionally build malformed/partial payloads to exercise parser rejection paths.
       "@typescript-eslint/no-unsafe-assignment": "off",
       "@typescript-eslint/no-unsafe-member-access": "off",
+      // Tests don't need JSDoc on test functions.
+      "jsdoc/require-jsdoc": "off",
     },
   },
   eslintConfigPrettier,
+  jsdocPlugin,
 );

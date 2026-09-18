@@ -35,8 +35,5 @@ one's `Status` line — never silently deleting or rewriting history.
 | --- | --- |
 | [0001](0001-use-dotnet-maui.md) | Use .NET MAUI for the client |
 | [0002](0002-use-cloudflare-durable-objects.md) | Use Cloudflare Durable Objects for per-instance state |
-| [0003](0003-zero-provisioning-instance-token-routing.md) | Zero-provisioning instance-token routing |
-| [0004](0004-websocket-delivery-and-acknowledgements.md) | WebSocket delivery with client acknowledgments |
-| [0005](0005-correlate-display-and-standard-webhooks.md) | Correlate Display and Standard webhooks instead of trusting one |
 | [0006](0006-on-device-text-to-speech.md) | On-device text-to-speech, no network translation |
-| [0007](0007-display-only-stateless-company-scoped-relay.md) | Display-only, stateless, company-scoped relay (supersedes 0003, 0004, 0005) |
+| [0007](0007-display-only-stateless-company-scoped-relay.md) | Display-only, stateless, company-scoped relay |

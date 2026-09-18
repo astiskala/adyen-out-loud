@@ -3,14 +3,19 @@ using AdyenOutLoud.Models;
 
 namespace AdyenOutLoud.Services;
 
+/// <summary>
+/// Orchestrates payment announcements: deduplication, localization, and text-to-speech.
+/// </summary>
 public sealed class PaymentAnnouncementService(
     ISettingsService settings,
     ITextToSpeechService textToSpeech,
     ILocalizationService localization,
     IClock clock) : IPaymentAnnouncementService
 {
+    /// <inheritdoc />
     public event EventHandler<AnnouncementResult>? AnnouncementCompleted;
 
+    /// <inheritdoc />
     public async Task<AnnouncementResult> AnnounceAsync(PaymentMessage message, CancellationToken cancellationToken)
     {
         var isNew = await settings.TryReserveEventIdAsync(message.Id, clock.UtcNow, cancellationToken).ConfigureAwait(false);

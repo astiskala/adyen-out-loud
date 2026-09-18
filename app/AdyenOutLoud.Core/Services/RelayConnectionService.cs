@@ -3,6 +3,10 @@ using AdyenOutLoud.Models;
 
 namespace AdyenOutLoud.Services;
 
+/// <summary>
+/// Manages the persistent WebSocket connection to the payment relay service.
+/// Handles connection lifecycle, reconnection with exponential backoff, and message dispatch.
+/// </summary>
 public sealed class RelayConnectionService(
     IRelayConfigurationService configurationService,
     IRelayConnectionFactory connectionFactory,
@@ -13,9 +17,13 @@ public sealed class RelayConnectionService(
     private CancellationTokenSource? _runCancellation;
     private Task? _runTask;
 
+    /// <inheritdoc />
     public event EventHandler<RelayStatus>? StatusChanged;
+
+    /// <inheritdoc />
     public event EventHandler<string>? Diagnostic;
 
+    /// <inheritdoc />
     public void Start()
     {
         lock (_sync)
@@ -40,6 +48,7 @@ public sealed class RelayConnectionService(
         }
     }
 
+    /// <inheritdoc />
     public async Task StopAsync()
     {
         Task? task;
@@ -142,6 +151,7 @@ public sealed class RelayConnectionService(
 
     private void SetStatus(RelayConnectionState state, string detail) => StatusChanged?.Invoke(this, new(state, detail));
 
+    /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
         await StopAsync().ConfigureAwait(false);

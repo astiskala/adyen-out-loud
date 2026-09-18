@@ -19,10 +19,9 @@ shape.
 
 ## What is persisted
 
-**Nothing, anywhere, on the Worker.** As of
-[ADR 0007](adr/0007-display-only-stateless-company-scoped-relay.md), `RelayObject` holds no
-storage at all — a Display notification is parsed and, if successful, pushed directly to whatever
-WebSocket connections are open for that terminal at that instant. There is no queue, no replay log,
+**Nothing, anywhere, on the Worker.** `RelayObject` holds no storage at all — a Display
+notification is parsed and, if successful, pushed directly to whatever WebSocket connections are
+open for that terminal at that instant. There is no queue, no replay log,
 and no retention window, because there is nothing to retain. A payment that happens while its
 terminal's app instance is disconnected is not announced later — see the ADR's Consequences section
 for that trade-off.

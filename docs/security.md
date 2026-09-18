@@ -2,8 +2,8 @@
 
 Contributor-facing reporting process lives in [`SECURITY.md`](../SECURITY.md); the security
 *assumptions* and *trade-offs* of the design live in [`docs/threat-model.md`](threat-model.md).
-This document is the implementation-level detail: what was audited, what the codebase does, and
-what tooling enforces it.
+This document is the implementation-level detail: what the codebase does and what tooling enforces
+it.
 
 ## Cryptographically secure randomness
 

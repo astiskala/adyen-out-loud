@@ -18,6 +18,9 @@
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <AnalysisMode>Recommended</AnalysisMode>
 
+    <!-- Generate XML documentation file for public APIs; CS1591 (missing XML comment) becomes a build error via TreatWarningsAsErrors. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
     <!-- Security and reliability diagnostics get escalated beyond "recommended". -->
     <WarningsNotAsErrors />
     <NoWarn />
@@ -29,8 +32,9 @@
     <NuGetAuditLevel>high</NuGetAuditLevel>
   </PropertyGroup>
 
-  <!-- CA2007 (ConfigureAwait) does not apply to test projects; xunit has no sync context to deadlock on. -->
+  <!-- Test projects: disable documentation generation and CA2007 (ConfigureAwait). -->
   <PropertyGroup Condition="'$(IsTestProject)' == 'true'">
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CA2007</NoWarn>
   </PropertyGroup>
 </Project>

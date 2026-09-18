@@ -8,10 +8,10 @@ project for a real deployment, read this before the feature list.
 
 | Asset | Why it matters |
 | --- | --- |
-| The generated company token | Bearer secret — see [Trust boundaries](#trust-boundaries) below. Anyone who has it can send fabricated payment announcements to *every terminal in the company* and connect to any of their live WebSocket feeds — a larger blast radius than the old per-instance token, since one URL is now shared across an entire company's terminals. |
+| The generated company token | Bearer secret — see [Trust boundaries](#trust-boundaries) below. Anyone who has it can send fabricated payment announcements to *every terminal in the company* and connect to any of their live WebSocket feeds. |
 | The relay URL (`https://<worker>/v1/c/<companyToken>`) | Contains the token in plain sight. Treat it exactly like a password, and share it only through the company's own webhook configuration and whatever channel installers use to receive it. |
 | The terminal serial number | Not secret by itself — it's the same value Adyen already sends in every Display webhook's `POIID` field, and knowing it alone grants nothing without the company token too. It only matters as *routing*, not as an authorization credential. |
-| Payment metadata in transit | `terminalId`, `transactionId`, `pspReference`, `occurredAt`, the Display result. Not cardholder data (see [`docs/privacy.md`](privacy.md)), and no longer includes amount or payment method at all (see [ADR 0007](adr/0007-display-only-stateless-company-scoped-relay.md)) — still operationally sensitive as evidence a transaction happened at a specific terminal. |
+| Payment metadata in transit | `terminalId`, `transactionId`, `pspReference`, `occurredAt`, the Display result. Not cardholder data (see [`docs/privacy.md`](privacy.md)). No payment method or amount is included — the Display notification never carries either — still operationally sensitive as evidence a transaction happened at a specific terminal. |
 | WebSocket messages in flight | Carry the payment metadata above between Worker and app. Nothing is retained after delivery — see [`docs/privacy.md`](privacy.md). |
 
 ## Trust boundaries
@@ -56,9 +56,9 @@ This is a materially weaker guarantee than HMAC verification:
 - There is no cryptographic proof-of-origin on any individual request — the Worker cannot
   distinguish "a request from Adyen's real infrastructure" from "a request from anyone who knows
   the URL."
-- Because the URL is now shared across an entire company rather than generated per-device, a leak
-  affects every terminal at once, not one device — a deliberate trade-off for
-  [not requiring Customer Area access per installer](adr/0007-display-only-stateless-company-scoped-relay.md).
+- The URL is shared across an entire company rather than generated per-device; a leak
+   affects every terminal at once — a deliberate trade-off for not requiring Customer Area access
+   per installer (see [ADR 0007](adr/0007-display-only-stateless-company-scoped-relay.md)).
 
 **Do not treat a fabricated announcement as evidence of an actual payment.** The worst-case impact
 of this weakness is a spoken false-positive confirmation, not financial loss — this project never
