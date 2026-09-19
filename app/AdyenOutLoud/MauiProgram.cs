@@ -21,6 +21,7 @@ public static class MauiProgram
     {
         var builder = MauiApp.CreateBuilder();
         builder.UseMauiApp<App>().AddAudio();
+        Handlers.InputChrome.Register();
 
 #if DEBUG
         builder.Logging.AddDebug();

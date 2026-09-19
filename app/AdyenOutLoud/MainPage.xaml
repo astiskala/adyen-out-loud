@@ -5,110 +5,121 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:AdyenOutLoud.ViewModels"
-    xmlns:models="clr-namespace:AdyenOutLoud.Models;assembly=AdyenOutLoud.Core"
-    BackgroundColor="{StaticResource Ink}">
+    xmlns:models="clr-namespace:AdyenOutLoud.Models;assembly=AdyenOutLoud.Core">
+    <!-- Spacing scale: 6 between a field label and its field, 16 between fields in a section,
+         32 between sections, 20 inside panels. -->
     <Grid RowDefinitions="Auto,*,Auto">
-        <BoxView HeightRequest="5" Color="{StaticResource AdyenGreen}" VerticalOptions="Start" />
+        <BoxView HeightRequest="4" Color="{StaticResource AdyenGreen}" VerticalOptions="Start" />
 
         <ScrollView Grid.Row="1">
-            <VerticalStackLayout Padding="24,36,24,32" Spacing="28" MaximumWidthRequest="760" HorizontalOptions="Center">
-                <VerticalStackLayout Spacing="6">
+            <VerticalStackLayout Padding="24,40,24,40" Spacing="32" MaximumWidthRequest="760" HorizontalOptions="Center">
+                <VerticalStackLayout Spacing="8">
                     <Label Text="ADYEN" Style="{StaticResource Eyebrow}" />
                     <Label Text="Out Loud" Style="{StaticResource Hero}" />
                     <Label Text="Turn successful terminal payments into instant spoken confirmations." Style="{StaticResource Subtitle}" />
                 </VerticalStackLayout>
 
                 <Border Style="{StaticResource Panel}">
-                    <VerticalStackLayout Spacing="10">
-                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+                    <VerticalStackLayout Spacing="8">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                             <BoxView WidthRequest="12" HeightRequest="12" Color="{Binding StatusColor}" CornerRadius="6" VerticalOptions="Center"
                                      AutomationProperties.IsInAccessibleTree="False" />
                             <Label Grid.Column="1" Text="{Binding StatusTitle}" Style="{StaticResource StatusTitle}" AutomationId="StatusTitle" />
                         </Grid>
                         <Label Text="{Binding StatusDetail}" Style="{StaticResource Body}" AutomationId="StatusDetail" />
-                        <Label Text="CONNECTING  /  LISTENING  /  NEEDS ATTENTION" Style="{StaticResource StateLegend}" />
                     </VerticalStackLayout>
                 </Border>
 
-                <VerticalStackLayout Spacing="14">
-                    <Label Text="TERMINAL SETUP" Style="{StaticResource SectionTitle}" />
-                    <Label Style="{StaticResource Body}">
-                        <Label.FormattedText>
-                            <FormattedString>
-                                <Span Text="Pair this device with a terminal once: take two approved payments on it (any amount), then enter its serial number and the last 4 characters of the PSP reference printed on each receipt, within 15 minutes. If your Adyen account doesn't send notifications to Adyen Out Loud yet, " />
-                                <Span Text="see the setup guide here" TextColor="{StaticResource AdyenGreen}" TextDecorations="Underline">
-                                    <Span.GestureRecognizers>
-                                        <TapGestureRecognizer Command="{Binding OpenSetupGuideCommand}" />
-                                    </Span.GestureRecognizers>
-                                </Span>
-                                <Span Text="." />
-                            </FormattedString>
-                        </Label.FormattedText>
-                    </Label>
-                    <Label Text="TERMINAL SERIAL NUMBER" Style="{StaticResource FieldLabel}" />
-                    <Border Style="{StaticResource InputBorder}">
-                        <Entry Text="{Binding TerminalSerialInput}"
-                               BackgroundColor="Transparent"
-                               Placeholder="324688170"
-                               TextColor="{StaticResource Paper}"
-                               FontFamily="monospace"
-                               SemanticProperties.Description="Terminal serial number" />
-                    </Border>
-                    <Label Text="RECEIPT CODES (LAST 4 OF EACH PSP REFERENCE)" Style="{StaticResource FieldLabel}" />
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                <VerticalStackLayout Spacing="16">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="Terminal setup" Style="{StaticResource SectionTitle}" />
+                        <Label Style="{StaticResource Body}">
+                            <Label.FormattedText>
+                                <FormattedString>
+                                    <Span Text="Pair this device with a terminal once: take two approved payments on it (any amount), then enter its serial number and the last 4 characters of the PSP reference printed on each receipt, within 15 minutes. If your Adyen account doesn't send notifications to Adyen Out Loud yet, " />
+                                    <Span Text="see the setup guide" Style="{StaticResource LinkSpan}">
+                                        <Span.GestureRecognizers>
+                                            <TapGestureRecognizer Command="{Binding OpenSetupGuideCommand}" />
+                                        </Span.GestureRecognizers>
+                                    </Span>
+                                    <Span Text="." />
+                                </FormattedString>
+                            </Label.FormattedText>
+                        </Label>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="TERMINAL SERIAL NUMBER" Style="{StaticResource FieldLabel}" />
                         <Border Style="{StaticResource InputBorder}">
-                            <Entry Text="{Binding FirstReceiptCode}"
-                                   BackgroundColor="Transparent"
-                                   Placeholder="1st receipt"
-                                   MaxLength="4"
-                                   Keyboard="Plain"
-                                   TextTransform="Uppercase"
-                                   TextColor="{StaticResource Paper}"
+                            <Entry Text="{Binding TerminalSerialInput}"
+                                   Placeholder="324688170"
                                    FontFamily="monospace"
-                                   SemanticProperties.Description="First receipt code" />
+                                   SemanticProperties.Description="Terminal serial number" />
                         </Border>
-                        <Border Grid.Column="1" Style="{StaticResource InputBorder}">
-                            <Entry Text="{Binding SecondReceiptCode}"
-                                   BackgroundColor="Transparent"
-                                   Placeholder="2nd receipt"
-                                   MaxLength="4"
-                                   Keyboard="Plain"
-                                   TextTransform="Uppercase"
-                                   TextColor="{StaticResource Paper}"
-                                   FontFamily="monospace"
-                                   SemanticProperties.Description="Second receipt code" />
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="RECEIPT CODES (LAST 4 OF EACH PSP REFERENCE)" Style="{StaticResource FieldLabel}" />
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                            <Border Style="{StaticResource InputBorder}">
+                                <Entry Text="{Binding FirstReceiptCode}"
+                                       Placeholder="1st receipt"
+                                       MaxLength="4"
+                                       Keyboard="Plain"
+                                       TextTransform="Uppercase"
+                                       FontFamily="monospace"
+                                       SemanticProperties.Description="First receipt code" />
+                            </Border>
+                            <Border Grid.Column="1" Style="{StaticResource InputBorder}">
+                                <Entry Text="{Binding SecondReceiptCode}"
+                                       Placeholder="2nd receipt"
+                                       MaxLength="4"
+                                       Keyboard="Plain"
+                                       TextTransform="Uppercase"
+                                       FontFamily="monospace"
+                                       SemanticProperties.Description="Second receipt code" />
+                            </Border>
+                        </Grid>
+                    </VerticalStackLayout>
+
+                    <VerticalStackLayout Spacing="8">
+                        <Button Text="Pair" Command="{Binding PairCommand}"
+                                SemanticProperties.Description="Pair this device with the terminal" />
+                        <Label Text="{Binding ConfigurationStatus}" Style="{StaticResource Caption}" AutomationId="ConfigurationStatus" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Spacing="16">
+                    <Label Text="Announcements" Style="{StaticResource SectionTitle}" />
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="LANGUAGE" Style="{StaticResource FieldLabel}" />
+                        <Border Style="{StaticResource InputBorder}">
+                            <Picker ItemsSource="{Binding Languages}"
+                                    ItemDisplayBinding="{Binding DisplayName, x:DataType=models:AppLanguage}"
+                                    SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}"
+                                    Title="Choose one of four languages"
+                                    SemanticProperties.Description="Announcement language" />
                         </Border>
-                    </Grid>
-                    <Button Text="Pair" Command="{Binding PairCommand}"
-                            SemanticProperties.Description="Pair this device with the terminal" />
-                    <Label Text="{Binding ConfigurationStatus}" Style="{StaticResource Caption}" AutomationId="ConfigurationStatus" />
-                    <Label Text="ANNOUNCEMENT LANGUAGE" Style="{StaticResource FieldLabel}" />
-                    <Border Style="{StaticResource InputBorder}">
-                        <Picker ItemsSource="{Binding Languages}"
-                                ItemDisplayBinding="{Binding DisplayName, x:DataType=models:AppLanguage}"
-                                SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}"
-                                TextColor="{StaticResource Paper}"
-                                Title="Choose one of four languages"
-                                TitleColor="{StaticResource Muted}"
-                                SemanticProperties.Description="Announcement language" />
-                    </Border>
-                    <Button Text="Test voice" Command="{Binding TestVoiceCommand}"
+                    </VerticalStackLayout>
+                    <Button Text="Test voice" Command="{Binding TestVoiceCommand}" Style="{StaticResource SecondaryButton}"
                             SemanticProperties.Description="Play a test announcement in the selected language" />
                 </VerticalStackLayout>
 
-                <Border Style="{StaticResource Panel}">
-                    <VerticalStackLayout Spacing="8">
-                        <Label Text="LATEST EVENT" Style="{StaticResource FieldLabel}" />
-                        <Label Text="{Binding LatestEvent}" Style="{StaticResource LatestEvent}" AutomationId="LatestEvent" />
-                    </VerticalStackLayout>
-                </Border>
+                <VerticalStackLayout Spacing="12">
+                    <Border Style="{StaticResource Panel}">
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="LATEST EVENT" Style="{StaticResource FieldLabel}" />
+                            <Label Text="{Binding LatestEvent}" Style="{StaticResource LatestEvent}" AutomationId="LatestEvent" />
+                        </VerticalStackLayout>
+                    </Border>
 
-                <Border Style="{StaticResource DiagnosticPanel}">
-                    <VerticalStackLayout Spacing="7">
-                        <Label Text="PLAYBACK STATUS" Style="{StaticResource FieldLabel}" />
-                        <Label Text="{Binding Diagnostic}" Style="{StaticResource Diagnostic}" AutomationId="Diagnostic" />
-                    </VerticalStackLayout>
-                </Border>
+                    <Border Style="{StaticResource DiagnosticPanel}">
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="PLAYBACK STATUS" Style="{StaticResource FieldLabel}" />
+                            <Label Text="{Binding Diagnostic}" Style="{StaticResource Diagnostic}" AutomationId="Diagnostic" />
+                        </VerticalStackLayout>
+                    </Border>
+                </VerticalStackLayout>
             </VerticalStackLayout>
         </ScrollView>
 
