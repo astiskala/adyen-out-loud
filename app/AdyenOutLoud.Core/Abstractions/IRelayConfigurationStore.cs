@@ -1,20 +1,16 @@
+using AdyenOutLoud.Models;
+
 namespace AdyenOutLoud.Abstractions;
 
-/// <summary>
-/// Persistent storage for the terminal serial number this device listens for.
-/// </summary>
+/// <summary>Persistent storage for the terminal serial and this device's token.</summary>
 public interface IRelayConfigurationStore
 {
-    /// <summary>
-    /// Gets the stored terminal serial number.
-    /// </summary>
-    /// <returns>The stored serial, or null if not set.</returns>
-    Task<string?> GetAsync();
+    /// <summary>Reads the saved pairing, or null if this device has not been paired.</summary>
+    /// <returns>The saved pairing, if any.</returns>
+    Task<RelayPairing?> GetAsync();
 
-    /// <summary>
-    /// Stores the terminal serial number.
-    /// </summary>
-    /// <param name="terminalSerial">The terminal serial number this app is configured for.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    Task SetAsync(string terminalSerial);
+    /// <summary>Saves a pairing, replacing any earlier one.</summary>
+    /// <param name="pairing">The terminal serial and device token.</param>
+    /// <returns>A task that completes once the pairing is saved.</returns>
+    Task SetAsync(RelayPairing pairing);
 }

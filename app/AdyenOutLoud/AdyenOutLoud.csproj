@@ -29,6 +29,12 @@
     <CodesignEntitlements Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">Platforms/MacCatalyst/Entitlements.plist</CodesignEntitlements>
   </PropertyGroup>
 
+  <!-- Release publishing passes RuntimeIdentifierOverride (see .github/workflows/release.yml); this works around
+       https://github.com/microsoft/WindowsAppSDK/issues/3337 as the MAUI publishing docs require. -->
+  <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows' and '$(RuntimeIdentifierOverride)' != ''">
+    <RuntimeIdentifier>$(RuntimeIdentifierOverride)</RuntimeIdentifier>
+  </PropertyGroup>
+
   <ItemGroup>
     <MauiIcon Include="Resources/AppIcon/appicon.svg" Color="#0B1014" />
     <MauiSplashScreen Include="Resources/Splash/splash.svg" Color="#0B1014" BaseSize="256,256" />

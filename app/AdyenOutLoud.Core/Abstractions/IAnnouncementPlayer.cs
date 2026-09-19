@@ -2,17 +2,13 @@ using AdyenOutLoud.Models;
 
 namespace AdyenOutLoud.Abstractions;
 
-/// <summary>
-/// Plays the pre-recorded announcement clips bundled with the app.
-/// </summary>
+/// <summary>Plays bundled announcement clips.</summary>
 public interface IAnnouncementPlayer
 {
-    /// <summary>
-    /// Plays a clip in the given language and completes when playback has finished.
-    /// </summary>
-    /// <param name="sound">Which announcement to play.</param>
-    /// <param name="language">The language of the recording to play.</param>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <summary>Plays a clip in the given language.</summary>
+    /// <param name="sound">Which clip to play.</param>
+    /// <param name="language">The clip's language.</param>
+    /// <param name="cancellationToken">Cancels playback.</param>
+    /// <returns>A task that completes when playback finishes.</returns>
     Task PlayAsync(AnnouncementSound sound, AppLanguage language, CancellationToken cancellationToken);
 }

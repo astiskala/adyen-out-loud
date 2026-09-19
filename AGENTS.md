@@ -7,8 +7,9 @@ Human contributors: see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 Adyen Out Loud plays a pre-recorded "Payment successful" clip on a nearby device when an Adyen
 terminal payment is approved. A Cloudflare Worker receives Adyen's Display webhook (`POST /webhook`)
 and a single Durable Object pushes it over WebSocket (`/ws/<terminalSerial>`) to a .NET MAUI app
-(Android, iOS, Mac Catalyst, Windows), or drops it if no app is connected. There are no accounts or
-tokens and one shared relay URL. Read [`docs/architecture.md`](docs/architecture.md) and
+(Android, iOS, Mac Catalyst, Windows), or drops it if no app is connected. A device must first pair
+with the terminal (`POST /pair/<serial>` with codes from two recent receipts) and then presents its
+token on the WebSocket. There are no accounts and one shared relay URL. Read [`docs/architecture.md`](docs/architecture.md) and
 [`docs/threat-model.md`](docs/threat-model.md) before changing anything non-trivial.
 
 ## Layout

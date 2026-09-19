@@ -1,42 +1,31 @@
 namespace AdyenOutLoud.Abstractions;
 
-/// <summary>
-/// Represents a WebSocket connection to the relay service.
-/// </summary>
+/// <summary>WebSocket connection to the relay.</summary>
 public interface IRelayConnection : IAsyncDisposable
 {
-    /// <summary>
-    /// Connects to the relay WebSocket endpoint.
-    /// </summary>
-    /// <param name="uri">The WebSocket URI to connect to.</param>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
-    /// <returns>A task representing the asynchronous connection.</returns>
-    Task ConnectAsync(Uri uri, CancellationToken cancellationToken);
+    /// <summary>Opens the connection, presenting the device token.</summary>
+    /// <param name="uri">The terminal's WebSocket URL.</param>
+    /// <param name="accessToken">The device token, sent as <c>Authorization: Bearer</c>.</param>
+    /// <param name="ct">Cancels the connection attempt.</param>
+    /// <returns>A task that completes once connected.</returns>
+    /// <exception cref="Models.RelayUnauthorizedException">The relay refused the token.</exception>
+    Task ConnectAsync(Uri uri, string accessToken, CancellationToken ct);
 
-    /// <summary>
-    /// Receives the next message from the relay.
-    /// </summary>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
-    /// <returns>The JSON message string, or null if the connection closed cleanly.</returns>
-    Task<string?> ReceiveAsync(CancellationToken cancellationToken);
+    /// <summary>Receives the next text message, or null when the relay closes the connection.</summary>
+    /// <param name="ct">Cancels the receive.</param>
+    /// <returns>The message, or null on close.</returns>
+    Task<string?> ReceiveAsync(CancellationToken ct);
 
-    /// <summary>
-    /// Closes the WebSocket connection gracefully.
-    /// </summary>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
-    /// <returns>A task representing the asynchronous close operation.</returns>
-    Task CloseAsync(CancellationToken cancellationToken);
+    /// <summary>Closes the connection normally.</summary>
+    /// <param name="ct">Cancels the close handshake.</param>
+    /// <returns>A task that completes once closed.</returns>
+    Task CloseAsync(CancellationToken ct);
 }
 
-/// <summary>
-/// Factory for creating relay connections.
-/// </summary>
+/// <summary>Creates relay connections.</summary>
 public interface IRelayConnectionFactory
 {
-    /// <summary>
-    /// Creates a new relay connection instance.
-    /// </summary>
-    /// <returns>A new <see cref="IRelayConnection"/> instance.</returns>
+    /// <summary>Creates a new, unopened connection.</summary>
+    /// <returns>The connection.</returns>
     IRelayConnection Create();
 }
-

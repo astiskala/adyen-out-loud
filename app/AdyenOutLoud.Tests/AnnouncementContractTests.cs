@@ -110,7 +110,7 @@ public sealed class AnnouncementContractTests
     private sealed class FakeConfigService : IRelayConfigurationService
     {
         public Task<RelayConfiguration?> GetAsync(CancellationToken cancellationToken = default) => Task.FromResult<RelayConfiguration?>(null);
-        public Task<RelayConfiguration> SaveAsync(string terminalSerial, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<RelayConfiguration> PairAsync(string terminalSerial, IReadOnlyList<string> receiptCodes, CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }
 
     private sealed class FakeConnectionFactory : IRelayConnectionFactory

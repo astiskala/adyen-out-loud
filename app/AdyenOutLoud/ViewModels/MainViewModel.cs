@@ -19,10 +19,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private readonly IAnnouncementPlayer _player;
     private readonly ISettingsService _settings;
     private bool _isTestingVoice;
-    private bool _isSavingConfig;
+    private bool _isPairing;
     private bool _initialized;
     private AppLanguage _selectedLanguage;
     private string _terminalSerialInput = string.Empty;
+    private string _firstReceiptCode = string.Empty;
+    private string _secondReceiptCode = string.Empty;
     private string _configurationStatus = string.Empty;
     private string _statusTitle = "CONNECTING";
     private string _statusDetail = "Preparing the payment listener...";
@@ -52,7 +54,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         relay.Diagnostic += OnDiagnostic;
         relay.AnnouncementCompleted += OnAnnouncementCompleted;
         TestVoiceCommand = new Command(async () => await TestVoiceAsync());
-        SaveConfigurationCommand = new Command(async () => await SaveConfigurationAsync());
+        PairCommand = new Command(async () => await PairAsync());
     }
 
     /// <inheritdoc />
@@ -76,12 +78,17 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         : "Adyen Out Loud keeps listening for payments while running in the background on this platform.";
 
     /// <summary>
-    /// Gets or sets the announcement language chosen in the form; it takes effect when the form is saved.
+    /// Gets or sets the announcement language; a change is saved immediately.
     /// </summary>
     public AppLanguage SelectedLanguage
     {
         get => _selectedLanguage;
-        set => Set(ref _selectedLanguage, value);
+        set
+        {
+            if (value is null || value == _selectedLanguage) return;
+            _settings.SelectedLanguage = value;
+            Set(ref _selectedLanguage, value);
+        }
     }
 
     /// <summary>
@@ -90,7 +97,17 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public string TerminalSerialInput { get => _terminalSerialInput; set => Set(ref _terminalSerialInput, value); }
 
     /// <summary>
-    /// Gets or sets the configuration status message.
+    /// Gets or sets the last 4 characters of the PSP reference on the first recent receipt.
+    /// </summary>
+    public string FirstReceiptCode { get => _firstReceiptCode; set => Set(ref _firstReceiptCode, value); }
+
+    /// <summary>
+    /// Gets or sets the last 4 characters of the PSP reference on the second recent receipt.
+    /// </summary>
+    public string SecondReceiptCode { get => _secondReceiptCode; set => Set(ref _secondReceiptCode, value); }
+
+    /// <summary>
+    /// Gets or sets the pairing status message.
     /// </summary>
     public string ConfigurationStatus { get => _configurationStatus; private set => Set(ref _configurationStatus, value); }
 
@@ -130,9 +147,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public ICommand OpenSetupGuideCommand { get; } = new Command(async () => await Launcher.Default.OpenAsync(SetupGuideUrl));
 
     /// <summary>
-    /// Gets the command to save the configuration.
+    /// Gets the command that pairs this device with the terminal.
     /// </summary>
-    public ICommand SaveConfigurationCommand { get; }
+    public ICommand PairCommand { get; }
 
     /// <summary>
     /// Initializes the view model by loading saved configuration.
@@ -143,11 +160,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         if (_initialized) return;
         try
         {
-            if (_initialized) return;
             var configuration = await _configuration.GetAsync();
             if (configuration is not null)
             {
                 TerminalSerialInput = configuration.TerminalSerial;
+                ConfigurationStatus = "Paired with this terminal.";
             }
             _initialized = true;
         }
@@ -160,35 +177,33 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private async Task SaveConfigurationAsync()
+    private async Task PairAsync()
     {
-        if (_isSavingConfig) return;
-        _isSavingConfig = true;
-        ((Command)SaveConfigurationCommand).ChangeCanExecute();
+        if (_isPairing) return;
+        _isPairing = true;
+        ((Command)PairCommand).ChangeCanExecute();
         try
         {
-            var terminalSerial = TerminalSerialInput.Trim();
-            if (terminalSerial.Length == 0)
-            {
-                ConfigurationStatus = "Enter this device's terminal serial number.";
-                return;
-            }
-
-            // Save first: a rejected save must not tear down a working connection.
-            await _configuration.SaveAsync(terminalSerial);
-            _settings.SelectedLanguage = SelectedLanguage;
+            ConfigurationStatus = "Pairing...";
+            // Pair first: a rejected attempt must not tear down a working connection.
+            await _configuration.PairAsync(TerminalSerialInput, [FirstReceiptCode, SecondReceiptCode]);
+            FirstReceiptCode = SecondReceiptCode = string.Empty;
             await _relay.StopAsync();
-            ConfigurationStatus = "Saved. Connecting...";
+            ConfigurationStatus = "Paired. Connecting...";
             _relay.Start();
+        }
+        catch (RelayPairingException exception)
+        {
+            ConfigurationStatus = exception.Message;
         }
         catch (Exception exception)
         {
-            ConfigurationStatus = $"Could not save: {exception.Message}";
+            ConfigurationStatus = $"Could not pair: {exception.Message}";
         }
         finally
         {
-            _isSavingConfig = false;
-            ((Command)SaveConfigurationCommand).ChangeCanExecute();
+            _isPairing = false;
+            ((Command)PairCommand).ChangeCanExecute();
         }
     }
 

@@ -83,7 +83,7 @@ public sealed class PaymentUiTests(UiEnvironment environment) : AppTest(environm
 
     private async Task ListenAsync()
     {
-        await SaveConfigurationAsync(Terminal);
+        await PairAsync(Terminal);
         await App.WaitForLabelAsync(StatusTitle, title => title == "LISTENING", "the app to connect to the relay", TimeSpan.FromSeconds(40));
     }
 }

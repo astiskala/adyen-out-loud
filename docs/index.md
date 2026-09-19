@@ -30,21 +30,37 @@ setting.
 
 ![The app after setup, showing LISTENING and the latest payment](images/app-listening.png)
 
-1. Open the app and enter the terminal's **serial number**: the part of the terminal ID after the
-   model prefix (`324688170` from `V400m-324688170`; it is also printed on the terminal).
-2. Choose the announcement language and tap **Save**. The status changes to **LISTENING**.
-3. Tap **Test voice** to hear the announcement, then take a payment. It appears under **Latest
-   event** and the recording plays within a few seconds.
+Each device is paired with one terminal, once. You need two receipts from that terminal, so you can
+do it without Customer Area access.
 
-If nothing plays, check that the status says **LISTENING**, the serial matches exactly, the webhook is
+1. Take two approved payments on the terminal (any amount) and keep both receipts.
+2. Within 15 minutes, open the app and enter the terminal's **serial number**: the part of the
+   terminal ID after the model prefix (`324688170` from `V400m-324688170`; it is also printed on the
+   terminal).
+3. Enter the **last 4 characters of the PSP reference** printed on each receipt and tap **Pair**. The
+   status changes to **LISTENING**. Each receipt pairs one device; for another device, take two new
+   payments.
+4. Choose the announcement language and tap **Test voice** to hear it, then take a payment. It
+   appears under **Latest event** and the recording plays within a few seconds.
+
+If pairing says the codes don't match, check the serial number and that both payments were approved
+in the last 15 minutes. Part 1 must already be done: the relay only sees payments from terminals whose
+webhook points at it. If nothing plays, check that the status says **LISTENING**, the webhook is
 active, and the volume is up. On iOS the app must stay in the foreground.
+
+## Download
+
+Android (`.apk`) and Windows (installer `.exe` or portable `.zip`) builds are attached to each
+[GitHub release](https://github.com/astiskala/adyen-out-loud/releases). On Android, allow installing
+apps from your browser or file manager. Windows builds aren't code-signed, so SmartScreen may ask you
+to confirm (**More info** > **Run anyway**).
 
 ## Good to know
 
 - Only approved payments are announced, always with the same message: Adyen's Display notification
   has no amount or payment method.
-- Nothing is stored. A device that is offline when a payment happens misses it.
-- The terminal serial is the only thing that routes a message, and it isn't secret, so **don't treat
-  an announcement as proof of payment**. See the [threat model](threat-model.md).
+- Payments aren't queued. A device that is offline when a payment happens misses it.
+- Only paired devices can listen. See the [threat model](threat-model.md) for what pairing does and
+  doesn't protect against.
 - For account issues use [Adyen's support](https://www.adyen.com/contact), and never paste live payment
   data into a GitHub issue.

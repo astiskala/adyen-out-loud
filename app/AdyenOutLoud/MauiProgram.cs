@@ -21,6 +21,7 @@ public static class MauiProgram
     {
         var builder = MauiApp.CreateBuilder();
         builder.UseMauiApp<App>().AddAudio();
+        Handlers.InputChrome.Register();
 
 #if DEBUG
         builder.Logging.AddDebug();
@@ -29,9 +30,11 @@ public static class MauiProgram
         builder.Services.AddSingleton<IAnnouncementPlayer, MauiAudioPlayer>();
         builder.Services.AddSingleton<ISettingsService, PreferencesSettingsService>();
         builder.Services.AddSingleton<IRelayConfigurationStore, PreferencesRelayConfigurationStore>();
+        builder.Services.AddSingleton(_ => new HttpClient { Timeout = TimeSpan.FromSeconds(15) });
         builder.Services.AddSingleton<IRelayConfigurationService>(provider => new RelayConfigurationService(
             provider.GetRequiredService<IRelayConfigurationStore>(),
-            RelayUrl()));
+            RelayUrl(),
+            provider.GetRequiredService<HttpClient>()));
         builder.Services.AddSingleton<IRelayConnectionFactory, ClientWebSocketConnectionFactory>();
         builder.Services.AddSingleton<IRelayConnectionService>(provider => new RelayConnectionService(
             provider.GetRequiredService<IRelayConfigurationService>(),
