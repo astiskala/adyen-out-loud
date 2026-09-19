@@ -5,6 +5,9 @@ using Microsoft.Maui.Storage;
 
 namespace AdyenOutLoud.Services;
 
+/// <summary>
+/// MAUI Preferences-based implementation of <see cref="ISettingsService"/>.
+/// </summary>
 public sealed class PreferencesSettingsService : ISettingsService, IDisposable
 {
     private const string LanguageKey = "announcement-language";
@@ -14,6 +17,7 @@ public sealed class PreferencesSettingsService : ISettingsService, IDisposable
     private readonly SemaphoreSlim _gate = new(1, 1);
     private List<RecentEvent>? _events;
 
+    /// <inheritdoc />
     public AppLanguage SelectedLanguage
     {
         get => AppLanguage.FromCode(Preferences.Default.Get(LanguageKey, AppLanguage.English.Code));
@@ -25,6 +29,7 @@ public sealed class PreferencesSettingsService : ISettingsService, IDisposable
         }
     }
 
+    /// <inheritdoc />
     public async Task<bool> TryReserveEventIdAsync(string eventId, DateTimeOffset receivedAt, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(eventId);
@@ -47,6 +52,9 @@ public sealed class PreferencesSettingsService : ISettingsService, IDisposable
         }
     }
 
+    /// <inheritdoc />
+    public void Dispose() => _gate.Dispose();
+
     private static List<RecentEvent> Load()
     {
         try
@@ -60,8 +68,6 @@ public sealed class PreferencesSettingsService : ISettingsService, IDisposable
             return [];
         }
     }
-
-    public void Dispose() => _gate.Dispose();
 }
 
 /// <summary>Persisted shape of a recently-seen relay event ID, kept outside the class so the source generator below can see it.</summary>

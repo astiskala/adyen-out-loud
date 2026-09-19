@@ -19,3 +19,4 @@ public interface IRelayConfigurationStore
     /// <returns>A task representing the asynchronous operation.</returns>
     Task SetAsync(Uri baseUrl, string terminalSerial);
 }
+

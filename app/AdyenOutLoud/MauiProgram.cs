@@ -7,8 +7,15 @@ using Microsoft.Maui.Hosting;
 
 namespace AdyenOutLoud;
 
+/// <summary>
+/// MAUI application builder.
+/// </summary>
 public static class MauiProgram
 {
+    /// <summary>
+    /// Creates the MAUI application.
+    /// </summary>
+    /// <returns>The configured <see cref="MauiApp"/>.</returns>
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
@@ -18,20 +25,18 @@ public static class MauiProgram
         builder.Logging.AddDebug();
 #endif
 
-        builder.Services.AddSingleton<IClock, SystemClock>();
-        builder.Services.AddSingleton<IRetryDelay, TaskRetryDelay>();
         builder.Services.AddSingleton<ITextToSpeechService, MauiSpeechService>();
         builder.Services.AddSingleton<ILocalizationService, ResxLocalizationService>();
         builder.Services.AddSingleton<ISettingsService, PreferencesSettingsService>();
         builder.Services.AddSingleton<IRelayConfigurationStore, SecureStorageRelayConfigurationStore>();
         builder.Services.AddSingleton<IRelayConfigurationService, RelayConfigurationService>();
         builder.Services.AddSingleton<IRelayConnectionFactory, ClientWebSocketConnectionFactory>();
-        builder.Services.AddSingleton<IPaymentAnnouncementService, PaymentAnnouncementService>();
         builder.Services.AddSingleton<IRelayConnectionService>(provider => new RelayConnectionService(
             provider.GetRequiredService<IRelayConfigurationService>(),
             provider.GetRequiredService<IRelayConnectionFactory>(),
-            provider.GetRequiredService<IPaymentAnnouncementService>(),
-            provider.GetRequiredService<IRetryDelay>()));
+            provider.GetRequiredService<ISettingsService>(),
+            provider.GetRequiredService<ITextToSpeechService>(),
+            provider.GetRequiredService<ILocalizationService>()));
         builder.Services.AddSingleton<IBackgroundExecutionService, BackgroundExecutionService>();
         builder.Services.AddSingleton<AppLifecycleCoordinator>();
         builder.Services.AddSingleton<MainViewModel>();

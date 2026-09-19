@@ -39,3 +39,4 @@ public interface IRelayConnectionFactory
     /// <returns>A new <see cref="IRelayConnection"/> instance.</returns>
     IRelayConnection Create();
 }
+

@@ -8,6 +8,9 @@ using Microsoft.Maui.Graphics;
 
 namespace AdyenOutLoud.ViewModels;
 
+/// <summary>
+/// Main view model for the application.
+/// </summary>
 public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 {
     private readonly IRelayConnectionService _relay;
@@ -15,8 +18,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private readonly ITextToSpeechService _textToSpeech;
     private readonly ILocalizationService _localization;
     private readonly ISettingsService _settings;
-    private readonly IPaymentAnnouncementService _announcements;
-    private readonly SemaphoreSlim _initializationGate = new(1, 1);
+    private bool _isTestingVoice;
+    private bool _isSavingConfig;
     private bool _initialized;
     private string _relayUrlInput = string.Empty;
     private string _terminalSerialInput = string.Empty;
@@ -27,40 +30,56 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private string _diagnostic = "Run Test voice to inspect the selected installed voice.";
     private string _latestEvent = "No payment event received yet.";
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MainViewModel"/> class.
+    /// </summary>
+    /// <param name="relay">The relay connection service.</param>
+    /// <param name="configuration">The relay configuration service.</param>
+    /// <param name="textToSpeech">The text-to-speech service.</param>
+    /// <param name="localization">The localization service.</param>
+    /// <param name="settings">The settings service.</param>
     public MainViewModel(
         IRelayConnectionService relay,
         IRelayConfigurationService configuration,
         ITextToSpeechService textToSpeech,
         ILocalizationService localization,
-        ISettingsService settings,
-        IPaymentAnnouncementService announcements)
+        ISettingsService settings)
     {
         _relay = relay;
         _configuration = configuration;
         _textToSpeech = textToSpeech;
         _localization = localization;
         _settings = settings;
-        _announcements = announcements;
         relay.StatusChanged += OnStatusChanged;
         relay.Diagnostic += OnDiagnostic;
-        announcements.AnnouncementCompleted += OnAnnouncementCompleted;
-        TestVoiceCommand = new AsyncCommand(TestVoiceAsync);
-        SaveConfigurationCommand = new AsyncCommand(SaveConfigurationAsync);
+        relay.AnnouncementCompleted += OnAnnouncementCompleted;
+        TestVoiceCommand = new Command(async () => await TestVoiceAsync());
+        SaveConfigurationCommand = new Command(async () => await SaveConfigurationAsync());
     }
 
+    /// <inheritdoc />
     public event PropertyChangedEventHandler? PropertyChanged;
 
     // CA1822 suggests making this static since it doesn't read instance state, but XAML's compiled
     // {Binding Languages} resolves against the page's instance DataContext and cannot bind to a
     // static member — see MainPage.xaml. Keeping this an instance member is required, not style.
 #pragma warning disable CA1822
+    /// <summary>
+    /// Gets all supported application languages.
+    /// </summary>
     public IReadOnlyList<AppLanguage> Languages => AppLanguage.All;
 #pragma warning restore CA1822
 
+    /// <summary>
+    /// Gets platform-specific footer text.
+    /// </summary>
     public string FooterText { get; } = OperatingSystem.IsIOS()
         ? "On iOS, keep Adyen Out Loud in the foreground while taking payments."
         : "Adyen Out Loud keeps listening for payments while running in the background on this platform.";
 
+    /// <summary>
+    /// Gets or sets the selected announcement language.
+    /// </summary>
     public AppLanguage SelectedLanguage
     {
         get => _settings.SelectedLanguage;
@@ -72,21 +91,63 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    /// <summary>
+    /// Gets or sets the relay URL input.
+    /// </summary>
     public string RelayUrlInput { get => _relayUrlInput; set => Set(ref _relayUrlInput, value); }
+
+    /// <summary>
+    /// Gets or sets the terminal serial number input.
+    /// </summary>
     public string TerminalSerialInput { get => _terminalSerialInput; set => Set(ref _terminalSerialInput, value); }
+
+    /// <summary>
+    /// Gets or sets the configuration status message.
+    /// </summary>
     public string ConfigurationStatus { get => _configurationStatus; private set => Set(ref _configurationStatus, value); }
+
+    /// <summary>
+    /// Gets or sets the connection status title.
+    /// </summary>
     public string StatusTitle { get => _statusTitle; private set => Set(ref _statusTitle, value); }
+
+    /// <summary>
+    /// Gets or sets the connection status detail.
+    /// </summary>
     public string StatusDetail { get => _statusDetail; private set => Set(ref _statusDetail, value); }
+
+    /// <summary>
+    /// Gets or sets the connection status color.
+    /// </summary>
     public Color StatusColor { get => _statusColor; private set => Set(ref _statusColor, value); }
+
+    /// <summary>
+    /// Gets or sets the diagnostic message.
+    /// </summary>
     public string Diagnostic { get => _diagnostic; private set => Set(ref _diagnostic, value); }
+
+    /// <summary>
+    /// Gets or sets the latest payment event details.
+    /// </summary>
     public string LatestEvent { get => _latestEvent; private set => Set(ref _latestEvent, value); }
+
+    /// <summary>
+    /// Gets the command to test the voice.
+    /// </summary>
     public ICommand TestVoiceCommand { get; }
+
+    /// <summary>
+    /// Gets the command to save the configuration.
+    /// </summary>
     public ICommand SaveConfigurationCommand { get; }
 
+    /// <summary>
+    /// Initializes the view model by loading saved configuration.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
     public async Task InitializeAsync()
     {
         if (_initialized) return;
-        await _initializationGate.WaitAsync();
         try
         {
             if (_initialized) return;
@@ -105,29 +166,28 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             StatusDetail = "Could not read the saved relay configuration.";
             Diagnostic = exception.Message;
         }
-        finally
-        {
-            _initializationGate.Release();
-        }
     }
 
     private async Task SaveConfigurationAsync()
     {
-        if (!Uri.TryCreate(RelayUrlInput.Trim(), UriKind.Absolute, out var baseUrl))
-        {
-            ConfigurationStatus = "Enter a valid https:// relay URL.";
-            return;
-        }
-
-        var terminalSerial = TerminalSerialInput.Trim();
-        if (terminalSerial.Length == 0)
-        {
-            ConfigurationStatus = "Enter this device's terminal serial number.";
-            return;
-        }
-
+        if (_isSavingConfig) return;
+        _isSavingConfig = true;
+        ((Command)SaveConfigurationCommand).ChangeCanExecute();
         try
         {
+            if (!Uri.TryCreate(RelayUrlInput.Trim(), UriKind.Absolute, out var baseUrl))
+            {
+                ConfigurationStatus = "Enter a valid https:// relay URL.";
+                return;
+            }
+
+            var terminalSerial = TerminalSerialInput.Trim();
+            if (terminalSerial.Length == 0)
+            {
+                ConfigurationStatus = "Enter this device's terminal serial number.";
+                return;
+            }
+
             await _relay.StopAsync();
             await _configuration.SaveAsync(baseUrl, terminalSerial);
             ConfigurationStatus = "Saved. Connecting...";
@@ -137,10 +197,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             ConfigurationStatus = $"Could not save: {exception.Message}";
         }
+        finally
+        {
+            _isSavingConfig = false;
+            ((Command)SaveConfigurationCommand).ChangeCanExecute();
+        }
     }
 
     private async Task TestVoiceAsync()
     {
+        if (_isTestingVoice) return;
+        _isTestingVoice = true;
+        ((Command)TestVoiceCommand).ChangeCanExecute();
         try
         {
             var language = SelectedLanguage;
@@ -151,6 +219,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         catch (Exception exception)
         {
             Diagnostic = $"Voice test failed: {exception.Message}";
+        }
+        finally
+        {
+            _isTestingVoice = false;
+            ((Command)TestVoiceCommand).ChangeCanExecute();
         }
     }
 
@@ -191,11 +264,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
         PropertyChanged?.Invoke(this, new(propertyName));
 
+    /// <inheritdoc />
     public void Dispose()
     {
         _relay.StatusChanged -= OnStatusChanged;
         _relay.Diagnostic -= OnDiagnostic;
-        _announcements.AnnouncementCompleted -= OnAnnouncementCompleted;
-        _initializationGate.Dispose();
+        _relay.AnnouncementCompleted -= OnAnnouncementCompleted;
     }
 }

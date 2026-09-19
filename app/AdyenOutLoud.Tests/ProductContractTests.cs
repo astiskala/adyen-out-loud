@@ -1,3 +1,4 @@
+using AdyenOutLoud.Models;
 using AdyenOutLoud.Services;
 
 namespace AdyenOutLoud.Tests;
@@ -46,7 +47,7 @@ public sealed class ProductContractTests
     [Fact]
     public void ProtocolTwoPaymentSucceededEnvelopeParsesEveryField()
     {
-        Assert.True(RelayProtocol.TryParsePayment(CompleteEnvelope, out var message));
+        Assert.True(RelayConnectionService.TryParsePayment(CompleteEnvelope, out var message));
         Assert.NotNull(message);
         Assert.Equal("event-1", message.Id);
         Assert.Equal("payment_succeeded", message.Type);
@@ -58,13 +59,13 @@ public sealed class ProductContractTests
     [Fact]
     public void UnsupportedProtocolVersionIsRejected()
     {
-        Assert.False(RelayProtocol.TryParsePayment(CompleteEnvelope.Replace("\"protocol\":2", "\"protocol\":1", StringComparison.Ordinal), out _));
+        Assert.False(RelayConnectionService.TryParsePayment(CompleteEnvelope.Replace("\"protocol\":2", "\"protocol\":1", StringComparison.Ordinal), out _));
     }
 
     [Fact]
     public void AnyMessageTypeOtherThanPaymentSucceededIsRejected()
     {
-        Assert.False(RelayProtocol.TryParsePayment(CompleteEnvelope.Replace("payment_succeeded", "payment_failed", StringComparison.Ordinal), out _));
+        Assert.False(RelayConnectionService.TryParsePayment(CompleteEnvelope.Replace("payment_succeeded", "payment_failed", StringComparison.Ordinal), out _));
     }
 
     [Theory]
@@ -72,7 +73,7 @@ public sealed class ProductContractTests
     [InlineData("{}")]
     [InlineData("[]")]
     public void MalformedOrIncompleteEnvelopeIsRejectedWithoutThrowing(string json) =>
-        Assert.False(RelayProtocol.TryParsePayment(json, out _));
+        Assert.False(RelayConnectionService.TryParsePayment(json, out _));
 
     public static TheoryData<string, string> RejectedMutations()
     {
@@ -101,7 +102,7 @@ public sealed class ProductContractTests
     [MemberData(nameof(RejectedMutations))]
     public void EveryRequiredFieldMutationIsRejectedWithoutThrowing(string mutation, string json)
     {
-        Assert.False(RelayProtocol.TryParsePayment(json, out var message), $"Expected rejection for: {mutation}");
+        Assert.False(RelayConnectionService.TryParsePayment(json, out var message), $"Expected rejection for: {mutation}");
         Assert.Null(message);
     }
 }

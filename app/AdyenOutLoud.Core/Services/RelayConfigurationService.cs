@@ -4,7 +4,7 @@ using AdyenOutLoud.Models;
 namespace AdyenOutLoud.Services;
 
 /// <summary>
-/// Implements <see cref="IRelayConfigurationService"/> using a persistent store.
+/// Service for managing relay configuration (retrieve and save).
 /// </summary>
 public sealed class RelayConfigurationService(IRelayConfigurationStore store) : IRelayConfigurationService
 {

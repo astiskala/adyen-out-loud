@@ -1,10 +1,18 @@
 namespace AdyenOutLoud;
 
+/// <summary>
+/// Application entry point.
+/// </summary>
 public partial class App : Application
 {
     private readonly MainPage _mainPage;
     private readonly Services.AppLifecycleCoordinator _lifecycle;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="App"/> class.
+    /// </summary>
+    /// <param name="mainPage">The main page of the application.</param>
+    /// <param name="lifecycle">The application lifecycle coordinator.</param>
     public App(MainPage mainPage, Services.AppLifecycleCoordinator lifecycle)
     {
         InitializeComponent();
@@ -12,6 +20,7 @@ public partial class App : Application
         _lifecycle = lifecycle;
     }
 
+    /// <inheritdoc />
     protected override Window CreateWindow(IActivationState? activationState)
     {
         var window = new Window(_mainPage);

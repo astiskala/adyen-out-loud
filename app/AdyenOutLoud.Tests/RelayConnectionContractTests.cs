@@ -14,7 +14,7 @@ public sealed class RelayConnectionContractTests
     public async Task ConnectionUsesDerivedWebSocketAndReceivesThePayment()
     {
         var connection = new Connection(Envelope);
-        var service = new RelayConnectionService(new Configuration(), new Factory(connection), new Announcement(), new Delay());
+        var service = new RelayConnectionService(new Configuration(), new Factory(connection), new Announcement(), new Speech(), new Localization());
 
         service.Start();
         await connection.MessageReceived.Task.WaitAsync(TimeSpan.FromSeconds(2));
@@ -29,21 +29,19 @@ public sealed class RelayConnectionContractTests
         var failed = new Connection(new IOException("offline"));
         var recovered = new Connection(Envelope);
         var factory = new Factory(failed, recovered);
-        var delay = new Delay();
-        var service = new RelayConnectionService(new Configuration(), factory, new Announcement(), delay);
+        var service = new RelayConnectionService(new Configuration(), factory, new Announcement(), new Speech(), new Localization());
 
         service.Start();
         await recovered.MessageReceived.Task.WaitAsync(TimeSpan.FromSeconds(2));
         await service.StopAsync();
 
         Assert.Equal(2, factory.Created);
-        Assert.Equal(TimeSpan.FromSeconds(1), Assert.Single(delay.Delays));
     }
 
     [Fact]
     public async Task StopBeforeStartIsANoOp()
     {
-        var service = new RelayConnectionService(new Configuration(), new Factory(), new Announcement(), new Delay());
+        var service = new RelayConnectionService(new Configuration(), new Factory(), new Announcement(), new Speech(), new Localization());
         await service.StopAsync();
     }
 
@@ -52,7 +50,7 @@ public sealed class RelayConnectionContractTests
     {
         var connection = new Connection(Envelope);
         var factory = new Factory(connection);
-        var service = new RelayConnectionService(new Configuration(), factory, new Announcement(), new Delay());
+        var service = new RelayConnectionService(new Configuration(), factory, new Announcement(), new Speech(), new Localization());
 
         service.Start();
         service.Start();
@@ -67,7 +65,7 @@ public sealed class RelayConnectionContractTests
     {
         var statuses = new List<RelayConnectionState>();
         var factory = new Factory();
-        var service = new RelayConnectionService(new FailingConfiguration(), factory, new Announcement(), new Delay());
+        var service = new RelayConnectionService(new FailingConfiguration(), factory, new Announcement(), new Speech(), new Localization());
         service.StatusChanged += (_, status) => statuses.Add(status.State);
 
         service.Start();
@@ -83,7 +81,7 @@ public sealed class RelayConnectionContractTests
     {
         var statuses = new List<RelayConnectionState>();
         var factory = new Factory();
-        var service = new RelayConnectionService(new UnconfiguredConfiguration(), factory, new Announcement(), new Delay());
+        var service = new RelayConnectionService(new UnconfiguredConfiguration(), factory, new Announcement(), new Speech(), new Localization());
         service.StatusChanged += (_, status) => statuses.Add(status.State);
 
         service.Start();
@@ -99,7 +97,7 @@ public sealed class RelayConnectionContractTests
     {
         var connection = new Connection("not a valid envelope");
         var diagnostics = new List<string>();
-        var service = new RelayConnectionService(new Configuration(), new Factory(connection), new Announcement(), new Delay());
+        var service = new RelayConnectionService(new Configuration(), new Factory(connection), new Announcement(), new Speech(), new Localization());
         service.Diagnostic += (_, message) => diagnostics.Add(message);
 
         service.Start();
@@ -115,15 +113,13 @@ public sealed class RelayConnectionContractTests
         var closed = new Connection(ClosedByRelay);
         var recovered = new Connection(Envelope);
         var factory = new Factory(closed, recovered);
-        var delay = new Delay();
-        var service = new RelayConnectionService(new Configuration(), factory, new Announcement(), delay);
+        var service = new RelayConnectionService(new Configuration(), factory, new Announcement(), new Speech(), new Localization());
 
         service.Start();
         await recovered.MessageReceived.Task.WaitAsync(TimeSpan.FromSeconds(2));
         await service.StopAsync();
 
         Assert.Equal(2, factory.Created);
-        Assert.Single(delay.Delays);
     }
 
     [Fact]
@@ -132,7 +128,7 @@ public sealed class RelayConnectionContractTests
         var statuses = new List<RelayConnectionState>();
         var connection = new Connection(new InvalidOperationException("boom"));
         var factory = new Factory(connection);
-        var service = new RelayConnectionService(new Configuration(), factory, new Announcement(), new Delay());
+        var service = new RelayConnectionService(new Configuration(), factory, new Announcement(), new Speech(), new Localization());
         service.StatusChanged += (_, status) => statuses.Add(status.State);
 
         service.Start();
@@ -147,7 +143,7 @@ public sealed class RelayConnectionContractTests
     public async Task DisposeAsyncStopsTheRunningLoop()
     {
         var connection = new Connection(Envelope);
-        var service = new RelayConnectionService(new Configuration(), new Factory(connection), new Announcement(), new Delay());
+        var service = new RelayConnectionService(new Configuration(), new Factory(connection), new Announcement(), new Speech(), new Localization());
 
         service.Start();
         await connection.MessageReceived.Task.WaitAsync(TimeSpan.FromSeconds(2));
@@ -177,11 +173,22 @@ public sealed class RelayConnectionContractTests
             throw new NotSupportedException("Not exercised by these tests.");
     }
 
-    private sealed class Announcement : IPaymentAnnouncementService
+    private sealed class Announcement : ISettingsService
     {
-        public event EventHandler<AnnouncementResult>? AnnouncementCompleted { add { } remove { } }
-        public Task<AnnouncementResult> AnnounceAsync(PaymentMessage message, CancellationToken cancellationToken) => Task.FromResult(
-            new AnnouncementResult(message.Id, false, true, "ok", message, null));
+        public AppLanguage SelectedLanguage { get; set; } = AppLanguage.English;
+        public Task<bool> TryReserveEventIdAsync(string eventId, DateTimeOffset receivedAt, CancellationToken cancellationToken) => Task.FromResult(true);
+    }
+
+    private sealed class Speech : ITextToSpeechService
+    {
+        public Task<SpeechDiagnostic> SpeakAsync(string text, AppLanguage language, CancellationToken cancellationToken) => Task.FromResult(
+            new SpeechDiagnostic(language.Locale, language.Locale, "ok"));
+    }
+
+    private sealed class Localization : ILocalizationService
+    {
+        public string CreatePaymentAnnouncement(PaymentMessage message, AppLanguage language) => "payment";
+        public string CreateTestAnnouncement(AppLanguage language) => "test";
     }
 
     /// <summary>Placed in <see cref="Connection"/>'s receive queue to simulate the relay closing the socket.</summary>
@@ -214,11 +221,5 @@ public sealed class RelayConnectionContractTests
         private readonly Queue<Connection> _connections = new(connections);
         public int Created { get; private set; }
         public IRelayConnection Create() { Created++; return _connections.Dequeue(); }
-    }
-
-    private sealed class Delay : IRetryDelay
-    {
-        public List<TimeSpan> Delays { get; } = [];
-        public Task WaitAsync(TimeSpan delay, CancellationToken cancellationToken) { Delays.Add(delay); return Task.CompletedTask; }
     }
 }

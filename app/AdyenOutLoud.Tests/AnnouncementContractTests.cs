@@ -75,8 +75,12 @@ public sealed class AnnouncementContractTests
         Assert.True(result.WasSpoken);
     }
 
-    private static PaymentAnnouncementService Create(ISettingsService settings, ITextToSpeechService speech, ILocalizationService localization) =>
-        new(settings, speech, localization, new Clock());
+    private static RelayConnectionService Create(ISettingsService settings, ITextToSpeechService speech, ILocalizationService localization)
+    {
+        var configService = new FakeConfigService();
+        var factory = new FakeConnectionFactory();
+        return new RelayConnectionService(configService, factory, settings, speech, localization);
+    }
 
     internal static PaymentMessage Message() => new(
         "event-1", "payment_succeeded", DateTimeOffset.Parse("2026-09-18T12:00:00Z", CultureInfo.InvariantCulture),
@@ -116,5 +120,14 @@ public sealed class AnnouncementContractTests
         public string CreateTestAnnouncement(AppLanguage language) => "test";
     }
 
-    private sealed class Clock : IClock { public DateTimeOffset UtcNow => DateTimeOffset.UnixEpoch; }
+    private sealed class FakeConfigService : IRelayConfigurationService
+    {
+        public Task<RelayConfiguration?> GetAsync(CancellationToken cancellationToken = default) => Task.FromResult<RelayConfiguration?>(null);
+        public Task<RelayConfiguration> SaveAsync(Uri baseUrl, string terminalSerial, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+    }
+
+    private sealed class FakeConnectionFactory : IRelayConnectionFactory
+    {
+        public IRelayConnection Create() => throw new NotImplementedException();
+    }
 }

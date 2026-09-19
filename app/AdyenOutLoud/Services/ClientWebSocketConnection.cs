@@ -4,24 +4,36 @@ using AdyenOutLoud.Abstractions;
 
 namespace AdyenOutLoud.Services;
 
+/// <summary>
+/// Factory for creating <see cref="ClientWebSocketConnection"/> instances.
+/// </summary>
 public sealed class ClientWebSocketConnectionFactory : IRelayConnectionFactory
 {
+    /// <inheritdoc />
     public IRelayConnection Create() => new ClientWebSocketConnection();
 }
 
+/// <summary>
+/// Client WebSocket connection to the relay service.
+/// </summary>
 public sealed class ClientWebSocketConnection : IRelayConnection
 {
     private const int MaxMessageBytes = 64 * 1024;
     private readonly ClientWebSocket _socket = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ClientWebSocketConnection"/> class.
+    /// </summary>
     public ClientWebSocketConnection()
     {
         _socket.Options.KeepAliveInterval = TimeSpan.FromSeconds(20);
     }
 
+    /// <inheritdoc />
     public Task ConnectAsync(Uri uri, CancellationToken cancellationToken) =>
         _socket.ConnectAsync(uri, cancellationToken);
 
+    /// <inheritdoc />
     public async Task<string?> ReceiveAsync(CancellationToken cancellationToken)
     {
         var buffer = new byte[4096];
@@ -52,6 +64,7 @@ public sealed class ClientWebSocketConnection : IRelayConnection
         }
     }
 
+    /// <inheritdoc />
     public async Task CloseAsync(CancellationToken cancellationToken)
     {
         if (_socket.State is WebSocketState.Open or WebSocketState.CloseReceived)
@@ -60,6 +73,7 @@ public sealed class ClientWebSocketConnection : IRelayConnection
         }
     }
 
+    /// <inheritdoc />
     public ValueTask DisposeAsync()
     {
         _socket.Dispose();

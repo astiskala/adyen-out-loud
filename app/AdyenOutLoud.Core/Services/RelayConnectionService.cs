@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AdyenOutLoud.Abstractions;
 using AdyenOutLoud.Models;
 
@@ -6,12 +7,14 @@ namespace AdyenOutLoud.Services;
 /// <summary>
 /// Manages the persistent WebSocket connection to the payment relay service.
 /// Handles connection lifecycle, reconnection with exponential backoff, and message dispatch.
+/// Also handles payment announcement (deduplication, localization, TTS).
 /// </summary>
 public sealed class RelayConnectionService(
     IRelayConfigurationService configurationService,
     IRelayConnectionFactory connectionFactory,
-    IPaymentAnnouncementService announcementService,
-    IRetryDelay retryDelay) : IRelayConnectionService, IAsyncDisposable
+    ISettingsService settings,
+    ITextToSpeechService textToSpeech,
+    ILocalizationService localization) : IRelayConnectionService, IAsyncDisposable
 {
     private readonly object _sync = new();
     private CancellationTokenSource? _runCancellation;
@@ -22,6 +25,11 @@ public sealed class RelayConnectionService(
 
     /// <inheritdoc />
     public event EventHandler<string>? Diagnostic;
+
+    /// <summary>
+    /// Event raised when a payment announcement completes (successfully or not).
+    /// </summary>
+    public event EventHandler<AnnouncementResult>? AnnouncementCompleted;
 
     /// <inheritdoc />
     public void Start()
@@ -111,13 +119,13 @@ public sealed class RelayConnectionService(
                 {
                     var json = await connection.ReceiveAsync(cancellationToken).ConfigureAwait(false);
                     if (json is null) throw new IOException("The relay closed the connection.");
-                    if (!RelayProtocol.TryParsePayment(json, out var payment) || payment is null)
+                    if (!TryParsePayment(json, out var payment) || payment is null)
                     {
                         Diagnostic?.Invoke(this, "Ignored an invalid relay envelope.");
                         continue;
                     }
 
-                    var result = await announcementService.AnnounceAsync(payment, cancellationToken).ConfigureAwait(false);
+                    var result = await AnnounceAsync(payment, cancellationToken).ConfigureAwait(false);
                     Diagnostic?.Invoke(this, result.Detail);
                 }
             }
@@ -131,7 +139,7 @@ public sealed class RelayConnectionService(
                 failures++;
                 var seconds = Math.Min(30, Math.Pow(2, Math.Min(failures - 1, 5)));
                 SetStatus(RelayConnectionState.Connecting, $"Connection lost. Retrying in {seconds:0} seconds.");
-                await retryDelay.WaitAsync(TimeSpan.FromSeconds(seconds), cancellationToken).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromSeconds(seconds), cancellationToken).ConfigureAwait(false);
             }
             catch (Exception exception)
             {
@@ -140,6 +148,106 @@ public sealed class RelayConnectionService(
                 break;
             }
         }
+    }
+
+    /// <summary>
+    /// Announces a successful payment via text-to-speech.
+    /// </summary>
+    /// <param name="message">The payment message to announce.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>The result of the announcement attempt.</returns>
+    public async Task<AnnouncementResult> AnnounceAsync(PaymentMessage message, CancellationToken cancellationToken)
+    {
+        var isNew = await settings.TryReserveEventIdAsync(message.Id, DateTimeOffset.UtcNow, cancellationToken).ConfigureAwait(false);
+        if (!isNew)
+        {
+            return Complete(new(message.Id, true, false, "Duplicate; not announced again.", message, null));
+        }
+
+        try
+        {
+            var language = settings.SelectedLanguage;
+            var text = localization.CreatePaymentAnnouncement(message, language);
+            var diagnostic = await textToSpeech.SpeakAsync(text, language, cancellationToken).ConfigureAwait(false);
+            return Complete(new(message.Id, false, true, diagnostic.Message, message, diagnostic));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            return Complete(new(message.Id, false, false, $"Payment recorded; voice failed: {exception.Message}", message, null));
+        }
+    }
+
+    private AnnouncementResult Complete(AnnouncementResult result)
+    {
+        try
+        {
+            AnnouncementCompleted?.Invoke(this, result);
+        }
+        catch (Exception)
+        {
+            // UI observers must never prevent processing the next message.
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Attempts to parse a JSON string as a payment success envelope.
+    /// </summary>
+    /// <param name="json">The JSON string to parse.</param>
+    /// <param name="payment">The parsed payment message, if successful.</param>
+    /// <returns>True if the JSON is a valid payment success envelope; otherwise, false.</returns>
+    public static bool TryParsePayment(string json, out PaymentMessage? payment)
+    {
+        payment = null;
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("protocol", out var protocol) || protocol.ValueKind != JsonValueKind.Number ||
+                !protocol.TryGetInt32(out var protocolVersion) || protocolVersion != 2 ||
+                !root.TryGetProperty("message", out var message) || message.ValueKind != JsonValueKind.Object ||
+                !TryString(message, "id", out var id) ||
+                !TryString(message, "type", out var type) ||
+                !type.Equals("payment_succeeded", StringComparison.Ordinal) ||
+                !TryDate(message, "occurredAt", out var occurredAt) ||
+                !TryString(message, "terminalId", out var terminalId) ||
+                !TryString(message, "transactionId", out var transactionId) ||
+                !TryString(message, "pspReference", out var pspReference))
+            {
+                return false;
+            }
+
+            payment = new PaymentMessage(id, type, occurredAt, terminalId, transactionId, pspReference);
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryDate(JsonElement element, string name, out DateTimeOffset value)
+    {
+        value = default;
+        return element.TryGetProperty(name, out var property) && property.ValueKind == JsonValueKind.String &&
+               property.TryGetDateTimeOffset(out value);
+    }
+
+    private static bool TryString(JsonElement element, string name, out string value)
+    {
+        value = string.Empty;
+        if (!element.TryGetProperty(name, out var property) || property.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        value = property.GetString() ?? string.Empty;
+        return !string.IsNullOrWhiteSpace(value);
     }
 
     private static async Task TryCloseAsync(IRelayConnection connection)
