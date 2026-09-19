@@ -35,7 +35,9 @@ jobs:
       - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with:
           global-json-file: global.json
-      - run: dotnet workload install android --version 10.0.401
+      - run: |
+          dotnet workload update
+          dotnet workload install android
       - run: dotnet build AdyenOutLoud/AdyenOutLoud.csproj -f net10.0-android -c Release
 
   ios-and-maccatalyst:
@@ -57,7 +59,9 @@ jobs:
           # so a runner-image default bump can't silently change what we build against.
           sudo xcode-select -s /Applications/Xcode_26.6.app/Contents/Developer
           xcodebuild -version
-      - run: dotnet workload install ios maccatalyst --version 10.0.401
+      - run: |
+          dotnet workload update
+          dotnet workload install ios maccatalyst
       - run: dotnet build AdyenOutLoud/AdyenOutLoud.csproj -f net10.0-ios -c Release
       - run: dotnet build AdyenOutLoud/AdyenOutLoud.csproj -f net10.0-maccatalyst -c Release
 
@@ -73,5 +77,7 @@ jobs:
       - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with:
           global-json-file: global.json
-      - run: dotnet workload install windows --version 10.0.401
+      - run: |
+          dotnet workload update
+          dotnet workload install windows
       - run: dotnet build AdyenOutLoud/AdyenOutLoud.csproj -f net10.0-windows10.0.19041.0 -c Release

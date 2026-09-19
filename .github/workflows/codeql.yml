@@ -42,7 +42,7 @@ jobs:
 
       - if: matrix.language == 'csharp'
         name: Install the workload set pinned in global.json
-        run: dotnet workload update --version 10.0.401
+        run: dotnet workload update
 
       - uses: github/codeql-action/init@d8073367669608af8fbcc5f63dd0a0d52bb90cff # v4
         with:
