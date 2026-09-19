@@ -38,7 +38,7 @@ jobs:
         working-directory: app
         run: |
           dotnet restore AdyenOutLoud.slnx
-          dotnet workload install android
+          dotnet workload install android --version 10.0.401
           ../scripts/dotnet-coverage.sh
       # NOTE TO WHOEVER SETS THIS UP: pin this to the current SonarSource scan action's released
       # tag/SHA — check https://github.com/SonarSource/sonarqube-scan-action for the current major

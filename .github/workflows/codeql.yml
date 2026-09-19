@@ -40,6 +40,10 @@ jobs:
         with:
           global-json-file: global.json
 
+      - if: matrix.language == 'csharp'
+        name: Install the workload set pinned in global.json
+        run: dotnet workload update --version 10.0.401
+
       - uses: github/codeql-action/init@d8073367669608af8fbcc5f63dd0a0d52bb90cff # v4
         with:
           languages: ${{ matrix.language }}
