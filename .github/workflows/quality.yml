@@ -54,7 +54,7 @@ jobs:
       - name: Install the Android workload
         run: |
           dotnet workload update
-          dotnet workload install android
+          dotnet workload install maui-android
       - name: Restore
         run: dotnet restore AdyenOutLoud.slnx
       - name: Format check

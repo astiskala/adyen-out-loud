@@ -39,7 +39,7 @@ jobs:
         run: |
           dotnet restore AdyenOutLoud.slnx
           dotnet workload update
-          dotnet workload install android
+          dotnet workload install maui-android
           ../scripts/dotnet-coverage.sh
       # NOTE TO WHOEVER SETS THIS UP: pin this to the current SonarSource scan action's released
       # tag/SHA — check https://github.com/SonarSource/sonarqube-scan-action for the current major

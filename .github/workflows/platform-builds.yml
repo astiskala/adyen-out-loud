@@ -37,7 +37,7 @@ jobs:
           global-json-file: global.json
       - run: |
           dotnet workload update
-          dotnet workload install android
+          dotnet workload install maui-android
       - run: dotnet build AdyenOutLoud/AdyenOutLoud.csproj -f net10.0-android -c Release
 
   ios-and-maccatalyst:
@@ -61,7 +61,7 @@ jobs:
           xcodebuild -version
       - run: |
           dotnet workload update
-          dotnet workload install ios maccatalyst
+          dotnet workload install maui-ios maui-maccatalyst
       - run: dotnet build AdyenOutLoud/AdyenOutLoud.csproj -f net10.0-ios -c Release
       - run: dotnet build AdyenOutLoud/AdyenOutLoud.csproj -f net10.0-maccatalyst -c Release
 
@@ -79,5 +79,5 @@ jobs:
           global-json-file: global.json
       - run: |
           dotnet workload update
-          dotnet workload install windows
+          dotnet workload install maui-windows
       - run: dotnet build AdyenOutLoud/AdyenOutLoud.csproj -f net10.0-windows10.0.19041.0 -c Release
