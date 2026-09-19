@@ -37,9 +37,9 @@ jobs:
       - name: .NET coverage
         working-directory: app
         run: |
-          dotnet restore AdyenOutLoud.slnx
           dotnet workload update
           dotnet workload install maui-android
+          dotnet restore AdyenOutLoud.slnx
           ../scripts/dotnet-coverage.sh
       # Inert until a SONAR_TOKEN secret and real sonar-project.properties values are configured
       # (see docs/development.md); until then this step fails.
