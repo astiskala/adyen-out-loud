@@ -122,6 +122,9 @@ jobs:
             -o "$RUNNER_TEMP/windows"
           test -f "$RUNNER_TEMP/windows/AdyenOutLoud.exe"
       - name: Build the installer
+        env:
+          # Stop Git Bash rewriting ISCC's /D switches as paths (ISCC would see them as extra script files).
+          MSYS_NO_PATHCONV: "1"
         run: |
           choco install innosetup --no-progress -y
           mkdir -p "$GITHUB_WORKSPACE/dist"
