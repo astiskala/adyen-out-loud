@@ -1,21 +1,36 @@
 # Threat model
 
-**There is no authentication.** The relay is one shared public URL. It doesn't verify that a webhook
-comes from Adyen (Adyen offers
-[HMAC signatures](https://docs.adyen.com/development-resources/webhooks/verify-hmac-signatures/);
-this project doesn't use them), and anyone can open a WebSocket for any terminal serial. The serial
-is the only routing key and it isn't secret.
+**There is no authentication.** The relay is one shared public URL and the terminal serial is the
+only routing key. It isn't secret, so anyone who knows it can open a WebSocket for that terminal.
+
+## Webhook source check
+
+`POST /webhook` is accepted only from the IP addresses `out.adyen.com` resolves to, which is where
+Adyen sends webhooks from. The Worker compares Cloudflare's `CF-Connecting-IP` (set by the edge, so
+the sender can't forge it) with that host's A and AAAA records, fetched over DNS-over-HTTPS and
+cached for 1 to 5 minutes. Other addresses get `403`. If the lookup fails the Worker returns `503`,
+so Adyen retries and the check is never skipped.
+
+Set `ADYEN_WEBHOOK_HOST` in `worker/wrangler.jsonc` to change the host; empty disables the check, as
+the local E2E tests do.
+
+Remaining gaps:
+
+- Other Adyen customers send from the same addresses, but Adyen builds each notification from a real
+  terminal event, so they can't choose a serial or payload.
+- A poisoned DNS answer for `out.adyen.com` would widen the allowed set.
+- Adyen's [HMAC signatures](https://docs.adyen.com/development-resources/webhooks/verify-hmac-signatures/)
+  aren't verified. They would add defence in depth but need a per-account secret.
 
 ## What that means
 
-- Anyone who knows or guesses a terminal serial can make that terminal's app play "Payment
-  successful" by posting a fake notification.
+- Fake announcements can't be posted directly, so a known serial doesn't let anyone trigger one.
 - Anyone who knows a serial can listen to that terminal's real payment metadata (terminal ID,
   transaction ID, PSP reference, timestamp) while they are connected.
-- **Don't treat an announcement as proof of payment.** The worst case is a false confirmation or
-  metadata disclosure; the project never touches money. That trade-off is deliberate
-  ([ADR 0008](adr/0008-single-shared-relay-and-prerecorded-audio.md)). If you need stronger guarantees,
-  add HMAC verification and account-level routing first.
+- **Don't treat an announcement as proof of payment.** The worst case is metadata disclosure or a
+  wrong announcement; the project never touches money. That trade-off is deliberate
+  ([ADR 0008](adr/0008-single-shared-relay-and-prerecorded-audio.md)). For stronger guarantees, add
+  account-level routing first.
 
 ## Data
 

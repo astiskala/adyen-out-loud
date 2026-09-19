@@ -32,7 +32,7 @@ enter each terminal's serial number in the app. Step by step: the
 ## Limitations
 
 - **No authentication.** The terminal serial is the only routing key and isn't secret, so anyone who
-  knows it can send a fake announcement or listen to that terminal. Read the
+  knows it can listen to that terminal. Webhooks are only accepted from Adyen's IP addresses. Read the
   [threat model](docs/threat-model.md) before relying on it.
 - The announcement is always the same generic message: Adyen's Display notification has no amount or
   payment method.

@@ -18,6 +18,7 @@ Tamil.
 
 ## Consequences
 - No token to generate, no URL to enter, nothing secret to protect.
-- The terminal serial is the only routing key and isn't secret, so anyone who knows it can spoof or
-  listen to that terminal ([threat model](../threat-model.md)). HMAC verification is the future fix.
+- The terminal serial is the only routing key and isn't secret, so anyone who knows it can listen
+  to that terminal ([threat model](../threat-model.md)). Webhooks are accepted only from Adyen's IP
+  addresses, so announcements can't be forged directly.
 - Changing the wording or voice means replacing the MP3s and shipping a new build.

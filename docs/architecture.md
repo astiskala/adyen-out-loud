@@ -13,16 +13,17 @@ accounts, and no stored state.
 
 ## Relay
 
-- `POST /webhook` receives Adyen's Display notification (JSON, 64 KiB max). Only an approved
-  `TENDER_FINAL` result is forwarded. The terminal serial is taken from `POIID` (`V400m-324688170`
+- `POST /webhook` receives Adyen's Display notification (JSON, 64 KiB max) from the IP addresses
+  `out.adyen.com` resolves to only. Only an approved `TENDER_FINAL` result is forwarded. The terminal serial is taken from `POIID` (`V400m-324688170`
   gives `324688170`).
 - `GET /ws/<terminalSerial>` upgrades to a WebSocket. The single Durable Object (`RelayObject`) tags
   each socket with its serial (hibernatable WebSockets) and sends a notification only to sockets with
   the matching serial. If none are connected the notification is dropped: nothing is queued or replayed.
 - `GET /health` returns `{"status":"ok"}`. Anything else returns `404`.
 
-Invalid input gets a plain error (`400`, `405`, `413`, `415`, `426`); a valid webhook always gets `202`
-so Adyen never retries.
+Invalid input gets a plain error (`400`, `403` for a non-Adyen address, `405`, `413`, `415`, `426`).
+A valid webhook always gets `202` so Adyen never retries; if Adyen's addresses can't be resolved the
+Worker returns `503` and Adyen retries.
 
 ## Message
 
