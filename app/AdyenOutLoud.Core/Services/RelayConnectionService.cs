@@ -7,7 +7,7 @@ namespace AdyenOutLoud.Services;
 /// <summary>
 /// Manages the persistent WebSocket connection to the payment relay service.
 /// Handles connection lifecycle, reconnection with exponential backoff, and message dispatch.
-/// Also handles payment announcement (deduplication, localization, TTS).
+/// Also handles payment announcement (deduplication, playing the clip).
 /// </summary>
 public sealed class RelayConnectionService(
     IRelayConfigurationService configurationService,

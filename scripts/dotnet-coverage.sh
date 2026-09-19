@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Runs the .NET test suite with coverage, merges the results, and enforces the
-# thresholds documented in docs/testing.md. AdyenOutLoud.Core carries the
+# thresholds documented in docs/development.md. AdyenOutLoud.Core carries the
 # project's pure business logic (parsing, correlation, localization, dedupe),
 # so it is held to the "critical logic" bar; the MAUI head project's platform
 # glue is exercised by architecture tests and manual/UI-smoke checks instead
-# (see docs/testing.md for why it is not line-coverage gated).
+# (see docs/development.md for why it is not line-coverage gated).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

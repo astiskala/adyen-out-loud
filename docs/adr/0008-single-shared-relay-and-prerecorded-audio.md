@@ -1,33 +1,23 @@
 # 0008: One shared relay URL and pre-recorded announcements
 
 ## Status
-Accepted. Supersedes the company-token routing in
-[ADR 0007](0007-display-only-stateless-company-scoped-relay.md) and the on-device speech synthesis in
-[ADR 0006](0006-on-device-text-to-speech.md).
+Accepted. It replaced per-company relay URLs with secret tokens and on-device text-to-speech.
 
 ## Context
-Per-company relay URLs meant someone had to generate a secret token, configure it in Adyen, and hand
-the same URL to every installer, who then had to paste it into the app. Since the relay stores
-nothing and only forwards a notification to whichever app is connected for that terminal, the
-per-company secret protected very little and cost a lot of setup friction. Separately, platform
-text-to-speech quality and voice availability varied for Chinese, Malay, and Tamil.
+Per-company URLs meant generating a secret, configuring it in Adyen, and handing it to every installer
+to paste into the app. The relay stores nothing and only forwards to whichever app is connected, so
+the secret protected very little. Platform text-to-speech was also inconsistent for Chinese, Malay, and
+Tamil.
 
 ## Decision
-1. **One relay for everyone:** `https://adyenoutloud.adam-eea.workers.dev`. Adyen's Display webhook is pointed at
-   `https://adyenoutloud.adam-eea.workers.dev/webhook`; apps connect to `wss://…/ws/<terminalSerial>` and the URL is compiled into the
-   app (Debug builds may override it with the `ADYEN_OUT_LOUD_RELAY_URL` environment variable for
-   testing). A single Durable Object holds every socket, tagged by terminal serial; a notification
-   whose terminal has no connected socket is dropped.
-2. **Pre-recorded audio:** the app bundles `PaymentReceived-{EN,ZH,MS,TA}.mp3` and
-   `TestAnnouncement-{EN,ZH,MS,TA}.mp3` (`app/AdyenOutLoud/Resources/Raw`) and plays them with
-   `Plugin.Maui.Audio`. There is no text-to-speech, no `.resx` localization, and no voice selection.
+1. **One relay for everyone:** `https://adyenoutloud.adam-eea.workers.dev`. Adyen posts to `/webhook`;
+   apps connect to `/ws/<terminalSerial>`. The URL is compiled into the app. A notification for a
+   terminal with no connected app is dropped.
+2. **Pre-recorded audio:** the app bundles `PaymentReceived-*.mp3` and `TestAnnouncement-*.mp3` for
+   EN, ZH, MS, and TA (`app/AdyenOutLoud/Resources/Raw`) and plays them with `Plugin.Maui.Audio`.
 
 ## Consequences
-- No token generation, no relay URL in the app, no "keep this URL secret" warning.
-- The terminal serial is the only routing key and it is not secret: anyone who knows it can spoof or
-  listen to that terminal's announcements. Accepted; see [`docs/threat-model.md`](../threat-model.md).
-  HMAC verification of Adyen's webhook remains the future hardening path.
-- One Durable Object serves all traffic, so throughput is bounded by a single object; shard by
-  terminal serial if that ever matters.
-- Announcement wording and voice are whatever is in the MP3 files; changing them means replacing the
-  files and shipping a new build.
+- No token to generate, no URL to enter, nothing secret to protect.
+- The terminal serial is the only routing key and isn't secret, so anyone who knows it can spoof or
+  listen to that terminal ([threat model](../threat-model.md)). HMAC verification is the future fix.
+- Changing the wording or voice means replacing the MP3s and shipping a new build.

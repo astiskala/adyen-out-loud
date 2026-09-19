@@ -44,6 +44,8 @@ public sealed class ConfigurationUiTests(UiEnvironment environment) : AppTest(en
     {
         await ChooseLanguageAsync(displayName);
         Assert.Equal(displayName, await App.ValueAsync(LanguagePicker));
+        await SaveConfigurationAsync("555000111");
+        await App.WaitForLabelAsync(ConfigurationStatus, text => text.StartsWith("Saved", StringComparison.Ordinal), "the save confirmation");
 
         await RelaunchAppAsync();
         await App.FindAsync(LanguagePicker);

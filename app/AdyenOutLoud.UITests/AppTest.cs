@@ -10,7 +10,7 @@ public abstract class AppTest(UiEnvironment environment) : IAsyncLifetime
     internal const string LatestEvent = "LatestEvent";
     internal const string Diagnostic = "Diagnostic";
     internal const string SerialField = "Terminal serial number";
-    internal const string SaveButton = "Save the terminal serial number";
+    internal const string SaveButton = "Save the terminal serial number and language";
     internal const string LanguagePicker = "Announcement language";
     internal const string TestVoiceButton = "Play a test announcement in the selected language";
     internal const string NoEventYet = "No payment event received yet.";

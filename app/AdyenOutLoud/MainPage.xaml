@@ -32,9 +32,19 @@
 
                 <VerticalStackLayout Spacing="14">
                     <Label Text="TERMINAL SETUP" Style="{StaticResource SectionTitle}" />
-                    <Label Text="Enter this device's terminal serial number. Your Adyen account also needs the Display webhook pointed at the relay; the set-up guide shows how." Style="{StaticResource Body}" />
-                    <Button Text="Open set-up guide" Command="{Binding OpenSetupGuideCommand}"
-                            SemanticProperties.Description="Open the online set-up guide" />
+                    <Label Style="{StaticResource Body}">
+                        <Label.FormattedText>
+                            <FormattedString>
+                                <Span Text="If you are using an Adyen partner or have already configured your Adyen account accordingly, simply enter the device's terminal serial number below. If you have your own Adyen account and are using this app for the first time, " />
+                                <Span Text="see the setup guide here" TextColor="{StaticResource AdyenGreen}" TextDecorations="Underline">
+                                    <Span.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding OpenSetupGuideCommand}" />
+                                    </Span.GestureRecognizers>
+                                </Span>
+                                <Span Text="." />
+                            </FormattedString>
+                        </Label.FormattedText>
+                    </Label>
                     <Label Text="TERMINAL SERIAL NUMBER" Style="{StaticResource FieldLabel}" />
                     <Border Style="{StaticResource InputBorder}">
                         <Entry Text="{Binding TerminalSerialInput}"
@@ -44,12 +54,6 @@
                                FontFamily="monospace"
                                SemanticProperties.Description="Terminal serial number" />
                     </Border>
-                    <Button Text="Save" Command="{Binding SaveConfigurationCommand}"
-                            SemanticProperties.Description="Save the terminal serial number" />
-                    <Label Text="{Binding ConfigurationStatus}" Style="{StaticResource Caption}" AutomationId="ConfigurationStatus" />
-                </VerticalStackLayout>
-
-                <VerticalStackLayout Spacing="12">
                     <Label Text="ANNOUNCEMENT LANGUAGE" Style="{StaticResource FieldLabel}" />
                     <Border Style="{StaticResource InputBorder}">
                         <Picker ItemsSource="{Binding Languages}"
@@ -60,7 +64,9 @@
                                 TitleColor="{StaticResource Muted}"
                                 SemanticProperties.Description="Announcement language" />
                     </Border>
-                    <Label Text="VOICE CHECK" Style="{StaticResource FieldLabel}" Margin="0,8,0,0" />
+                    <Button Text="Save" Command="{Binding SaveConfigurationCommand}"
+                            SemanticProperties.Description="Save the terminal serial number and language" />
+                    <Label Text="{Binding ConfigurationStatus}" Style="{StaticResource Caption}" AutomationId="ConfigurationStatus" />
                     <Button Text="Test voice" Command="{Binding TestVoiceCommand}"
                             SemanticProperties.Description="Play a test announcement in the selected language" />
                 </VerticalStackLayout>

@@ -1,6 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>net10.0-android;net10.0-ios;net10.0-maccatalyst;net10.0-windows10.0.19041.0</TargetFrameworks>
+    <!-- Each OS can only build some platforms: the iOS/Mac Catalyst packs exist only on macOS and the Windows packs only on Windows. -->
+    <TargetFrameworks>net10.0-android</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('osx'))">$(TargetFrameworks);net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+    <!-- The resolved package graph differs per OS, so a single lock file cannot be valid everywhere. -->
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
     <OutputType>Exe</OutputType>
     <RootNamespace>AdyenOutLoud</RootNamespace>
     <UseMaui>true</UseMaui>

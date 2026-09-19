@@ -2,7 +2,7 @@ name: Deploy Worker
 
 # Deploys the relay to Cloudflare (https://adyenoutloud.adam-eea.workers.dev) after the Worker's own
 # quality gate passes. Requires the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository secrets
-# (see docs/repository-settings.md). Pull requests never deploy.
+# (see docs/development.md). Pull requests never deploy.
 
 on:
   push:

@@ -7,7 +7,7 @@ import {
 } from "../src/adyen/display-parser";
 
 // Fast, dependency-free tests for the pure parsing/normalization helpers — no Workers runtime needed.
-// See docs/testing.md for how this file relates to the Durable Object integration tests in worker.test.ts.
+// See docs/development.md for how this file relates to the Durable Object integration tests in worker.test.ts.
 
 describe("pspReferenceFromTransactionId", () => {
   it("takes everything after the last dot", () => {

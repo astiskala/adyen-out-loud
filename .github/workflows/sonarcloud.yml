@@ -46,7 +46,7 @@ jobs:
       # version before pinning; do not assume a version from memory (see AGENTS.md's
       # version-sensitivity rule). This job is inert (fails cleanly at this step) until a real
       # SONAR_TOKEN secret and sonar-project.properties values are configured — see
-      # docs/repository-settings.md.
+      # docs/development.md.
       - name: SonarCloud scan
         uses: SonarSource/sonarqube-scan-action@REPLACE_WITH_CURRENT_PINNED_SHA
         env:

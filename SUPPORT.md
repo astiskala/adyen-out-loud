@@ -30,7 +30,7 @@ For any of the above, contact [Adyen Support](https://www.adyen.com/contact) dir
 
 ## Questions about how something works
 
-Check [`docs/`](docs/) first — [`docs/architecture.md`](docs/architecture.md),
-[`docs/protocol.md`](docs/protocol.md), and [`docs/index.md`](docs/index.md) cover most
+Check [`docs/`](docs/) first — [`docs/architecture.md`](docs/architecture.md) and the
+[set-up guide](docs/index.md) cover most
 "how does X work" questions. If the docs don't answer it, a GitHub issue (not a feature request —
 just ask) is fine.

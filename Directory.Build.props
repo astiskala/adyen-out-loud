@@ -25,7 +25,7 @@
     <WarningsNotAsErrors />
     <NoWarn />
 
-    <!-- NuGet vulnerability auditing (see docs/security.md). High/critical advisories fail the build;
+    <!-- NuGet vulnerability auditing (see docs/development.md). High/critical advisories fail the build;
          lower severities are still reported (as restore output) without blocking. -->
     <NuGetAudit>true</NuGetAudit>
     <NuGetAuditMode>all</NuGetAuditMode>

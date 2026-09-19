@@ -21,6 +21,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private bool _isTestingVoice;
     private bool _isSavingConfig;
     private bool _initialized;
+    private AppLanguage _selectedLanguage;
     private string _terminalSerialInput = string.Empty;
     private string _configurationStatus = string.Empty;
     private string _statusTitle = "CONNECTING";
@@ -46,6 +47,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _configuration = configuration;
         _player = player;
         _settings = settings;
+        _selectedLanguage = settings.SelectedLanguage;
         relay.StatusChanged += OnStatusChanged;
         relay.Diagnostic += OnDiagnostic;
         relay.AnnouncementCompleted += OnAnnouncementCompleted;
@@ -74,17 +76,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         : "Adyen Out Loud keeps listening for payments while running in the background on this platform.";
 
     /// <summary>
-    /// Gets or sets the selected announcement language.
+    /// Gets or sets the announcement language chosen in the form; it takes effect when the form is saved.
     /// </summary>
     public AppLanguage SelectedLanguage
     {
-        get => _settings.SelectedLanguage;
-        set
-        {
-            if (value.Code == _settings.SelectedLanguage.Code) return;
-            _settings.SelectedLanguage = value;
-            OnPropertyChanged();
-        }
+        get => _selectedLanguage;
+        set => Set(ref _selectedLanguage, value);
     }
 
     /// <summary>
@@ -179,6 +176,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
             // Save first: a rejected save must not tear down a working connection.
             await _configuration.SaveAsync(terminalSerial);
+            _settings.SelectedLanguage = SelectedLanguage;
             await _relay.StopAsync();
             ConfigurationStatus = "Saved. Connecting...";
             _relay.Start();

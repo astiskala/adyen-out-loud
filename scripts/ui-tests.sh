@@ -14,7 +14,6 @@ ROOT="$PWD"
 UI="$ROOT/app/AdyenOutLoud.UITests"
 APP_PROJECT="$ROOT/app/AdyenOutLoud/AdyenOutLoud.csproj"
 APP_BUNDLE="$ROOT/app/AdyenOutLoud/bin/Debug/net10.0-ios/iossimulator-arm64/AdyenOutLoud.app"
-LOCK_FILE="$ROOT/app/AdyenOutLoud/packages.lock.json"
 DRIVER="xcuitest@12.12.5"
 
 [[ "$(uname)" == "Darwin" ]] || { echo "The UI tests need macOS (iOS Simulator)." >&2; exit 1; }
@@ -28,17 +27,12 @@ fi
 
 UDID=""
 APPIUM_PID=""
-LOCK_BACKUP="$(mktemp)"
-cp "$LOCK_FILE" "$LOCK_BACKUP"
 cleanup() {
   [[ -n "$APPIUM_PID" ]] && kill "$APPIUM_PID" 2>/dev/null || true
   if [[ -n "$UDID" && -z "${UITEST_KEEP_SIMULATOR:-}" ]]; then
     xcrun simctl shutdown "$UDID" 2>/dev/null || true
     xcrun simctl delete "$UDID" 2>/dev/null || true
   fi
-  # Building for the simulator rewrites the app's packages.lock.json; don't leave that behind.
-  cp "$LOCK_BACKUP" "$LOCK_FILE"
-  rm -f "$LOCK_BACKUP"
 }
 trap cleanup EXIT
 

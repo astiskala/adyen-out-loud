@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Full local quality suite — the closest local approximation of the required PR checks
 # (.github/workflows/quality.yml). See docs/development.md for what each piece needs installed
-# and docs/quality.md for why each check exists.
+# and docs/development.md.
 #
 # Runs everything possible on the current OS: the Worker's full `npm run quality`, the .NET
 # projects that don't need a platform-specific toolchain (Core, Tests, ArchitectureTests), and the

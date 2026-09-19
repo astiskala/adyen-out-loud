@@ -67,7 +67,7 @@ jobs:
           dotnet build AdyenOutLoud/AdyenOutLoud.csproj -f net10.0-android -c Release
       - name: Architecture tests
         run: dotnet test AdyenOutLoud.ArchitectureTests/AdyenOutLoud.ArchitectureTests.csproj --no-build -c Release
-      - name: Unit tests with coverage (see docs/testing.md for thresholds)
+      - name: Unit tests with coverage (see docs/development.md for thresholds)
         run: ../scripts/dotnet-coverage.sh
       - name: Upload coverage report
         if: always()

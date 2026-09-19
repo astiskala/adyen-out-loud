@@ -25,20 +25,15 @@ Adyen directly.
 ## Supported versions
 
 This project does not yet have tagged releases; treat the `main` branch as the only supported
-version until [`docs/releasing.md`](docs/releasing.md) describes an actual release process. Once
-releases exist, this section will list which ones receive security fixes.
+version until tagged releases exist.
 
 ## Known design trade-offs
 
-Before reporting "the webhook URL isn't HMAC-verified" — this is a known, deliberately documented
-v1 design choice, not an oversight. Read [`docs/threat-model.md`](docs/threat-model.md) first; if
+Before reporting that the relay has no authentication or HMAC verification: this is a known, deliberate
+design choice, not an oversight. Read [`docs/threat-model.md`](docs/threat-model.md) first; if
 your report is about something beyond what that document already covers, please do still report
 it.
 
 ## Learn more
 
-- [`docs/threat-model.md`](docs/threat-model.md) — assets, trust boundaries, and threats this
-  project defends against (and the one it explicitly doesn't yet)
-- [`docs/security.md`](docs/security.md) — implementation-level detail: input validation, logging
-  redaction, TLS, dependency scanning
-- [`docs/privacy.md`](docs/privacy.md) — what data this project touches, stores, and for how long
+[`docs/threat-model.md`](docs/threat-model.md) covers the assets, trust boundaries, and known risks.

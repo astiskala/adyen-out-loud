@@ -23,7 +23,7 @@ public interface IRelayConnectionService
     event EventHandler<AnnouncementResult>? AnnouncementCompleted;
 
     /// <summary>
-    /// Announces a successful payment via text-to-speech.
+    /// Announces a successful payment by playing the pre-recorded clip.
     /// </summary>
     /// <param name="message">The payment message to announce.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
