@@ -44,7 +44,7 @@ jobs:
         name: Install the workload set pinned in global.json
         run: dotnet workload update
 
-      - uses: github/codeql-action/init@d8073367669608af8fbcc5f63dd0a0d52bb90cff # v4
+      - uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
