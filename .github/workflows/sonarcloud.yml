@@ -41,14 +41,10 @@ jobs:
           dotnet workload update
           dotnet workload install maui-android
           ../scripts/dotnet-coverage.sh
-      # NOTE TO WHOEVER SETS THIS UP: pin this to the current SonarSource scan action's released
-      # tag/SHA — check https://github.com/SonarSource/sonarqube-scan-action for the current major
-      # version before pinning; do not assume a version from memory (see AGENTS.md's
-      # version-sensitivity rule). This job is inert (fails cleanly at this step) until a real
-      # SONAR_TOKEN secret and sonar-project.properties values are configured — see
-      # docs/development.md.
+      # Inert until a SONAR_TOKEN secret and real sonar-project.properties values are configured
+      # (see docs/development.md); until then this step fails.
       - name: SonarCloud scan
-        uses: SonarSource/sonarqube-scan-action@REPLACE_WITH_CURRENT_PINNED_SHA
+        uses: SonarSource/sonarqube-scan-action@ba9859eae8dd6bd29e412f25ddbbef3d032000f4 # v8.2.2
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
