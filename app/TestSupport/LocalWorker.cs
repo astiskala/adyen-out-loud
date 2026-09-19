@@ -37,7 +37,7 @@ public sealed class LocalWorker : IAsyncLifetime
             RedirectStandardOutput = true,
             RedirectStandardError = true,
         };
-        foreach (var argument in new[] { wrangler, "dev", "--port", port.ToString(CultureInfo.InvariantCulture), "--ip", "127.0.0.1", "--inspector-port", FreePort().ToString(CultureInfo.InvariantCulture), "--persist-to", _stateDirectory })
+        foreach (var argument in new[] { wrangler, "dev", "--port", port.ToString(CultureInfo.InvariantCulture), "--ip", "127.0.0.1", "--inspector-port", FreePort().ToString(CultureInfo.InvariantCulture), "--persist-to", _stateDirectory, "--var", "ADYEN_WEBHOOK_HOST:" })
         {
             start.ArgumentList.Add(argument);
         }

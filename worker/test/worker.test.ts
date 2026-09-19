@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { reset } from "cloudflare:test";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parseDisplayNotification } from "../src/adyen/display-parser";
 import type { OutboundEnvelope } from "../src/adyen/models";
 import worker from "../src/index";
@@ -16,6 +16,27 @@ declare module "cloudflare:workers" {
 
 const BASE = "https://worker.test";
 const testEnv = env;
+const ADYEN_IP = "203.0.113.10";
+
+/**
+ * Answers the worker's DNS-over-HTTPS lookups of out.adyen.com without touching the network.
+ * @param {(type: string) => unknown[] | Response} answer - Returns the DNS answers (or a raw response) for a record type.
+ */
+function stubDns(
+  answer: (type: string) => unknown[] | Response = (type) =>
+    type === "A" ? [{ type: 1, TTL: 300, data: ADYEN_IP }] : [{ type: 28, TTL: 300, data: "2001:db8::10" }],
+): void {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((input: string) => {
+      const type = new URL(input).searchParams.get("type") ?? "";
+      const result = answer(type);
+      return Promise.resolve(
+        result instanceof Response ? result : Response.json({ Status: 0, Answer: result }),
+      );
+    }),
+  );
+}
 
 async function fetchWorker(path: string, init?: RequestInit): Promise<Response> {
   return worker.fetch(new Request(`${BASE}${path}`, init), testEnv);
@@ -32,7 +53,7 @@ function displayFor(pspReference: string, terminalId?: string): typeof approvedD
 async function post(value: unknown, serialized = JSON.stringify(value)): Promise<Response> {
   return fetchWorker("/webhook", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", "cf-connecting-ip": ADYEN_IP },
     body: serialized,
   });
 }
@@ -61,7 +82,15 @@ async function connect(terminalSerial: string): Promise<WebSocket> {
   return response.webSocket;
 }
 
-afterEach(async () => reset());
+beforeEach(() => {
+  stubDns();
+});
+
+afterEach(async () => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+  await reset();
+});
 
 describe("entrypoint module exports", () => {
   it("exports only the default handler and the Durable Object class", async () => {
@@ -71,6 +100,50 @@ describe("entrypoint module exports", () => {
     // keep non-class exports in other modules (see src/ingress-rules.ts).
     const entrypoint = await import("../src/index");
     expect(Object.keys(entrypoint).sort()).toEqual(["RelayObject", "default"]);
+  });
+});
+
+describe("webhook source verification", () => {
+  const send = (ip?: string): Promise<Response> =>
+    fetchWorker("/webhook", {
+      method: "POST",
+      headers: { "content-type": "application/json", ...(ip ? { "cf-connecting-ip": ip } : {}) },
+      body: JSON.stringify(unknownValid),
+    });
+
+  it("accepts an IPv4 or IPv6 address that out.adyen.com resolves to", async () => {
+    expect((await send(ADYEN_IP)).status).toBe(202);
+    expect((await send("2001:DB8::10")).status).toBe(202);
+  });
+
+  it("rejects other addresses and requests without a client address", async () => {
+    expect((await send("198.51.100.7")).status).toBe(403);
+    expect((await send()).status).toBe(403);
+  });
+
+  it("does not gate health checks or WebSockets", async () => {
+    expect((await fetchWorker("/health")).status).toBe(200);
+    expect((await fetchWorker("/ws/324688170")).status).toBe(426);
+  });
+
+  it("fails closed with 503 when the address list cannot be resolved", async () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: Date.now() + 10 * 60_000 });
+    stubDns(() => new Response("nope", { status: 500 }));
+    const response = await send(ADYEN_IP);
+    expect(response.status).toBe(503);
+    expect(response.headers.get("retry-after")).toBe("60");
+  });
+
+  it("is skipped when ADYEN_WEBHOOK_HOST is empty (local development)", async () => {
+    const response = await worker.fetch(
+      new Request(`${BASE}/webhook`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(unknownValid),
+      }),
+      { ...testEnv, ADYEN_WEBHOOK_HOST: "" } as unknown as typeof testEnv,
+    );
+    expect(response.status).toBe(202);
   });
 });
 
@@ -97,12 +170,15 @@ describe("public contract and routing", () => {
   });
 
   it("4. rejects unsupported media, invalid JSON, and oversized streamed bodies cleanly", async () => {
-    expect((await fetchWorker("/webhook", { method: "POST", body: "{}" })).status).toBe(415);
+    const asAdyen = { "cf-connecting-ip": ADYEN_IP };
+    expect((await fetchWorker("/webhook", { method: "POST", headers: asAdyen, body: "{}" })).status).toBe(
+      415,
+    );
     expect(
       (
         await fetchWorker("/webhook", {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", ...asAdyen },
           body: "{bad",
         })
       ).status,
@@ -118,7 +194,7 @@ describe("public contract and routing", () => {
       (
         await fetchWorker("/webhook", {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", ...asAdyen },
           body: stream,
         })
       ).status,

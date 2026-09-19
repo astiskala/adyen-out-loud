@@ -1,5 +1,6 @@
 import { MAX_BODY_BYTES, RELAY_OBJECT_NAME } from "./ingress-rules";
 import { RelayObject } from "./relay-object";
+import { isWebhookSource } from "./webhook-source";
 
 export { RelayObject };
 
@@ -48,6 +49,8 @@ function relay(env: Env): DurableObjectStub {
  * Cloudflare Worker entry point handling:
  * - GET /health: Health check endpoint.
  * - POST /webhook: Ingest a Display webhook from Adyen (the one URL every account configures).
+ *   Only accepted from the addresses ADYEN_WEBHOOK_HOST (out.adyen.com) resolves to; an empty value
+ *   disables the check for local development.
  * - GET /ws/{terminalSerial}: WebSocket upgrade for a terminal's app.
  * A webhook for a terminal with no connected app is dropped; nothing is stored.
  */
@@ -58,6 +61,16 @@ export default {
 
     if (url.pathname === "/webhook") {
       if (request.method !== "POST") return json({ error: "Method not allowed" }, 405, { allow: "POST" });
+      const sourceHost: string = env.ADYEN_WEBHOOK_HOST;
+      if (sourceHost) {
+        let allowed: boolean;
+        try {
+          allowed = await isWebhookSource(sourceHost, request.headers.get("cf-connecting-ip"));
+        } catch {
+          return json({ error: "Source verification unavailable" }, 503, { "retry-after": "60" });
+        }
+        if (!allowed) return json({ error: "Forbidden" }, 403);
+      }
       if (!(request.headers.get("content-type") ?? "").toLowerCase().startsWith("application/json")) {
         return json({ error: "JSON required" }, 415);
       }
