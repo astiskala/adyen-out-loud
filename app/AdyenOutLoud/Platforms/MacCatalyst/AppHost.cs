@@ -3,10 +3,10 @@ using Foundation;
 namespace AdyenOutLoud;
 
 /// <summary>
-/// iOS application delegate.
+/// Mac Catalyst application delegate.
 /// </summary>
 [Register("AppDelegate")]
-public class AppDelegate : MauiUIApplicationDelegate
+public class AppHost : MauiUIApplicationDelegate
 {
     /// <inheritdoc />
     protected override MauiApp CreateMauiApp() => MauiProgram.CreateMauiApp();

@@ -31,15 +31,15 @@ warehouse.
 
 ## What is spoken locally
 
-The announcement — always the fixed phrase "Payment successful" (localized per
-[`docs/testing.md`](testing.md#localization)) — is composed and spoken entirely on the device via
-on-device text-to-speech — see [ADR 0006](adr/0006-on-device-text-to-speech.md). It is never sent
+The announcement — always the fixed phrase "Payment successful" (recorded in four languages, see
+[`docs/testing.md`](testing.md#localization)) — is a pre-recorded clip bundled in the app and played entirely on
+the device — see [ADR 0008](adr/0008-single-shared-relay-and-prerecorded-audio.md). It is never sent
 anywhere else. The device also keeps a small bounded cache of recently-seen event IDs
 (`ISettingsService`, backed by MAUI `Preferences`, capped at 40 entries — see
 [`PreferencesSettingsService`](../app/AdyenOutLoud/Services/PreferencesSettingsService.cs)) purely
 to avoid re-announcing a duplicate; this cache holds event IDs, not payment content. The app also
-stores its configured relay URL and terminal serial number in platform secure storage — see
-[`docs/security.md`](security.md#token-handling).
+stores its configured terminal serial number in platform secure storage — see
+[`docs/security.md`](security.md#terminal-serial-handling).
 
 ## Analytics
 

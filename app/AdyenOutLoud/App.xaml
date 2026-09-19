@@ -4,11 +4,37 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
     <Application.Resources>
+        <!-- Defined inline (not as Source= dictionaries): each separate dictionary file makes the MAUI
+             XAML generator emit an undocumented public class, which fails CS1591 under warnings-as-errors. -->
         <ResourceDictionary>
-            <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="Resources/Styles/Colors.xaml" />
-                <ResourceDictionary Source="Resources/Styles/Styles.xaml" />
-            </ResourceDictionary.MergedDictionaries>
+            <Color x:Key="Ink">#0B1014</Color>
+            <Color x:Key="PanelColor">#141C22</Color>
+            <Color x:Key="PanelRaised">#1A242C</Color>
+            <Color x:Key="Paper">#F5F7F8</Color>
+            <Color x:Key="Muted">#98A6AF</Color>
+            <Color x:Key="Rule">#2A3740</Color>
+            <Color x:Key="AdyenGreen">#0ABF53</Color>
+
+            <Style TargetType="ContentPage"><Setter Property="Shell.NavBarIsVisible" Value="False" /></Style>
+            <Style x:Key="Eyebrow" TargetType="Label"><Setter Property="TextColor" Value="{StaticResource AdyenGreen}" /><Setter Property="FontAttributes" Value="Bold" /><Setter Property="FontSize" Value="13" /><Setter Property="CharacterSpacing" Value="3" /></Style>
+            <Style x:Key="Hero" TargetType="Label"><Setter Property="TextColor" Value="{StaticResource Paper}" /><Setter Property="FontAttributes" Value="Bold" /><Setter Property="FontSize" Value="48" /><Setter Property="LineHeight" Value="0.95" /></Style>
+            <Style x:Key="Subtitle" TargetType="Label"><Setter Property="TextColor" Value="{StaticResource Muted}" /><Setter Property="FontSize" Value="17" /><Setter Property="LineHeight" Value="1.35" /></Style>
+            <Style x:Key="Body" TargetType="Label"><Setter Property="TextColor" Value="{StaticResource Muted}" /><Setter Property="FontSize" Value="14" /></Style>
+            <Style x:Key="Caption" TargetType="Label"><Setter Property="TextColor" Value="{StaticResource Muted}" /><Setter Property="FontSize" Value="12" /><Setter Property="LineHeight" Value="1.3" /></Style>
+            <Style x:Key="StatusTitle" TargetType="Label"><Setter Property="TextColor" Value="{StaticResource Paper}" /><Setter Property="FontAttributes" Value="Bold" /><Setter Property="FontSize" Value="18" /></Style>
+            <Style x:Key="SectionTitle" TargetType="Label"><Setter Property="TextColor" Value="{StaticResource Paper}" /><Setter Property="FontAttributes" Value="Bold" /><Setter Property="FontSize" Value="22" /></Style>
+            <Style x:Key="FieldLabel" TargetType="Label"><Setter Property="TextColor" Value="{StaticResource Muted}" /><Setter Property="FontAttributes" Value="Bold" /><Setter Property="FontSize" Value="11" /><Setter Property="CharacterSpacing" Value="1.5" /></Style>
+            <Style x:Key="StateLegend" TargetType="Label"><Setter Property="TextColor" Value="{StaticResource Muted}" /><Setter Property="FontSize" Value="9" /><Setter Property="CharacterSpacing" Value="0.7" /></Style>
+            <Style x:Key="Emphasis" TargetType="Label"><Setter Property="TextColor" Value="{StaticResource Paper}" /><Setter Property="FontAttributes" Value="Bold" /><Setter Property="FontSize" Value="14" /></Style>
+            <Style x:Key="LatestEvent" TargetType="Label"><Setter Property="TextColor" Value="{StaticResource Paper}" /><Setter Property="FontSize" Value="15" /><Setter Property="LineHeight" Value="1.35" /></Style>
+            <Style x:Key="WarningText" TargetType="Label"><Setter Property="TextColor" Value="#FFD28A" /><Setter Property="FontSize" Value="12" /><Setter Property="LineHeight" Value="1.3" /></Style>
+            <Style x:Key="Diagnostic" TargetType="Label"><Setter Property="TextColor" Value="{StaticResource Paper}" /><Setter Property="FontFamily" Value="monospace" /><Setter Property="FontSize" Value="12" /><Setter Property="LineHeight" Value="1.3" /></Style>
+            <Style x:Key="Footer" TargetType="Label"><Setter Property="TextColor" Value="{StaticResource Muted}" /><Setter Property="BackgroundColor" Value="{StaticResource PanelColor}" /><Setter Property="HorizontalTextAlignment" Value="Center" /><Setter Property="Padding" Value="18,14" /><Setter Property="FontSize" Value="12" /></Style>
+            <Style x:Key="Panel" TargetType="Border"><Setter Property="BackgroundColor" Value="{StaticResource PanelRaised}" /><Setter Property="Stroke" Value="{StaticResource Rule}" /><Setter Property="StrokeThickness" Value="1" /><Setter Property="Padding" Value="20" /><Setter Property="StrokeShape"><Setter.Value><RoundRectangle CornerRadius="16" /></Setter.Value></Setter></Style>
+            <Style x:Key="DiagnosticPanel" TargetType="Border" BasedOn="{StaticResource Panel}"><Setter Property="BackgroundColor" Value="{StaticResource PanelColor}" /></Style>
+            <Style x:Key="WarningPanel" TargetType="Border" BasedOn="{StaticResource Panel}"><Setter Property="BackgroundColor" Value="#2A2115" /><Setter Property="Stroke" Value="#705323" /><Setter Property="Padding" Value="14" /></Style>
+            <Style x:Key="InputBorder" TargetType="Border"><Setter Property="BackgroundColor" Value="{StaticResource PanelRaised}" /><Setter Property="Stroke" Value="{StaticResource Rule}" /><Setter Property="StrokeThickness" Value="1" /><Setter Property="Padding" Value="8,2" /><Setter Property="StrokeShape"><Setter.Value><RoundRectangle CornerRadius="12" /></Setter.Value></Setter></Style>
+            <Style TargetType="Button"><Setter Property="BackgroundColor" Value="{StaticResource AdyenGreen}" /><Setter Property="TextColor" Value="#06130B" /><Setter Property="FontAttributes" Value="Bold" /><Setter Property="FontSize" Value="15" /><Setter Property="HeightRequest" Value="52" /><Setter Property="CornerRadius" Value="12" /><Setter Property="Padding" Value="20,12" /></Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

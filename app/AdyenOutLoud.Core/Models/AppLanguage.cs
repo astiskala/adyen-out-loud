@@ -5,28 +5,27 @@ namespace AdyenOutLoud.Models;
 /// </summary>
 /// <param name="Code">The ISO 639-1 language code (e.g., "en", "zh").</param>
 /// <param name="DisplayName">The human-readable display name in the language itself.</param>
-/// <param name="Locale">The BCP 47 locale identifier for TTS (e.g., "en-SG", "zh-SG").</param>
-public sealed record AppLanguage(string Code, string DisplayName, string Locale)
+public sealed record AppLanguage(string Code, string DisplayName)
 {
     /// <summary>
     /// English (Singapore).
     /// </summary>
-    public static readonly AppLanguage English = new("en", "English", "en-SG");
+    public static readonly AppLanguage English = new("en", "English");
 
     /// <summary>
     /// Chinese (Singapore).
     /// </summary>
-    public static readonly AppLanguage Chinese = new("zh", "中文", "zh-SG");
+    public static readonly AppLanguage Chinese = new("zh", "中文");
 
     /// <summary>
     /// Malay (Singapore).
     /// </summary>
-    public static readonly AppLanguage Malay = new("ms", "Bahasa Melayu", "ms-SG");
+    public static readonly AppLanguage Malay = new("ms", "Bahasa Melayu");
 
     /// <summary>
     /// Tamil (Singapore).
     /// </summary>
-    public static readonly AppLanguage Tamil = new("ta", "தமிழ்", "ta-SG");
+    public static readonly AppLanguage Tamil = new("ta", "தமிழ்");
 
     /// <summary>
     /// Gets all supported languages.

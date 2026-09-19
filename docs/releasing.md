@@ -37,7 +37,7 @@ as "CI already does this."
    no `CHANGELOG.md` — write the release notes directly from the commits/PRs included (e.g.
    `gh release create vX.Y.Z --generate-notes`).
 7. **Verify** — install the released app build and confirm it connects to the deployed Worker
-   end-to-end (see [`docs/adyen-setup.md`](adyen-setup.md) for the manual verification steps).
+   end-to-end (see [`docs/index.md`](index.md) for the manual verification steps).
 
 ## Signing requirements
 

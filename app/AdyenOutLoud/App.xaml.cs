@@ -5,25 +5,29 @@ namespace AdyenOutLoud;
 /// </summary>
 public partial class App : Application
 {
-    private readonly MainPage _mainPage;
+    private readonly Func<MainPage> _createMainPage;
     private readonly Services.AppLifecycleCoordinator _lifecycle;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="App"/> class.
     /// </summary>
-    /// <param name="mainPage">The main page of the application.</param>
+    /// <param name="createMainPage">
+    /// Creates the main page. It is a factory, not the page itself, because the page's XAML resolves
+    /// <c>{StaticResource}</c> keys defined in <c>App.xaml</c>; injecting the built page would construct it
+    /// before <see cref="InitializeComponent"/> below has loaded those resources.
+    /// </param>
     /// <param name="lifecycle">The application lifecycle coordinator.</param>
-    public App(MainPage mainPage, Services.AppLifecycleCoordinator lifecycle)
+    public App(Func<MainPage> createMainPage, Services.AppLifecycleCoordinator lifecycle)
     {
         InitializeComponent();
-        _mainPage = mainPage;
+        _createMainPage = createMainPage;
         _lifecycle = lifecycle;
     }
 
     /// <inheritdoc />
     protected override Window CreateWindow(IActivationState? activationState)
     {
-        var window = new Window(_mainPage);
+        var window = new Window(_createMainPage());
         window.Activated += OnActivated;
         window.Stopped += OnStopped;
         window.Resumed += OnResumed;

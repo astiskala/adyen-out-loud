@@ -1,34 +1,38 @@
 namespace AdyenOutLoud.Services;
 
 /// <summary>
-/// Factory for creating relay WebSocket URLs from base HTTPS URLs.
+/// Knows where the shared relay lives and builds per-terminal WebSocket URLs from it.
 /// </summary>
 public static class RelayEndpointFactory
 {
     /// <summary>
-    /// Creates a WebSocket URL for a specific terminal from the company base URL.
+    /// The hosted relay every installation talks to. The same host receives Adyen's Display webhook at <c>/webhook</c>.
     /// </summary>
-    /// <param name="companyUrl">The base HTTPS URL of the relay (must be HTTPS, no query/fragment).</param>
+    public static readonly Uri DefaultBaseUrl = new("https://adyenoutloud.adam-eea.workers.dev");
+
+    /// <summary>
+    /// Creates the WebSocket URL for a specific terminal.
+    /// </summary>
+    /// <param name="relayUrl">The base HTTPS URL of the relay (no query/fragment).</param>
     /// <param name="terminalSerial">The terminal serial number.</param>
     /// <returns>A WSS WebSocket URL for the terminal.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="companyUrl"/> is null.</exception>
-    /// <exception cref="ArgumentException">Thrown if <paramref name="companyUrl"/> is not a valid HTTPS URL or <paramref name="terminalSerial"/> is empty.</exception>
-    public static Uri CreateWebSocketUrl(Uri companyUrl, string terminalSerial)
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="relayUrl"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="relayUrl"/> is not a valid HTTPS URL or <paramref name="terminalSerial"/> is empty.</exception>
+    public static Uri CreateWebSocketUrl(Uri relayUrl, string terminalSerial)
     {
-        ArgumentNullException.ThrowIfNull(companyUrl);
+        ArgumentNullException.ThrowIfNull(relayUrl);
         ArgumentException.ThrowIfNullOrWhiteSpace(terminalSerial);
-        if (!companyUrl.IsAbsoluteUri || companyUrl.Scheme != Uri.UriSchemeHttps ||
-            !string.IsNullOrEmpty(companyUrl.Query) || !string.IsNullOrEmpty(companyUrl.Fragment))
+        if (!relayUrl.IsAbsoluteUri || relayUrl.Scheme != Uri.UriSchemeHttps ||
+            !string.IsNullOrEmpty(relayUrl.Query) || !string.IsNullOrEmpty(relayUrl.Fragment))
         {
-            throw new ArgumentException("The relay URL must be an HTTPS address with no query or fragment.", nameof(companyUrl));
+            throw new ArgumentException("The relay URL must be an HTTPS address with no query or fragment.", nameof(relayUrl));
         }
 
-        var escapedSerial = Uri.EscapeDataString(terminalSerial);
-        var builder = new UriBuilder(companyUrl)
+        var builder = new UriBuilder(relayUrl)
         {
             Scheme = "wss",
-            Port = companyUrl.IsDefaultPort ? -1 : companyUrl.Port,
-            Path = $"{companyUrl.AbsolutePath.TrimEnd('/')}/t/{escapedSerial}/ws",
+            Port = relayUrl.IsDefaultPort ? -1 : relayUrl.Port,
+            Path = $"{relayUrl.AbsolutePath.TrimEnd('/')}/ws/{Uri.EscapeDataString(terminalSerial)}",
         };
         return builder.Uri;
     }

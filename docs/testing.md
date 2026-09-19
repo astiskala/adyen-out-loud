@@ -5,8 +5,8 @@
 | Layer | Project | What it covers | Needs a device/emulator? |
 | --- | --- | --- | --- |
 | Unit — pure logic | `worker/test/parsers.test.ts` | Display parser, terminal-serial derivation, `asObject`/`asString` — no Workers runtime globals needed | No |
-| Integration — Worker runtime | `worker/test/worker.test.ts` | HTTP ingress, company/terminal Durable Object routing, hibernatable-WebSocket tag fan-out, statelessness (no queue/replay), sensitive-data logging | No (runs inside `workerd` via `@cloudflare/vitest-plugin`, not a real device) |
-| Unit — Core domain | `app/AdyenOutLoud.Tests` | Announcement composition, localization, relay protocol parsing, relay configuration/endpoint derivation, speech-locale selection, connection retry/backoff | No |
+| Integration — Worker runtime | `worker/test/worker.test.ts` | HTTP ingress, terminal Durable Object routing, hibernatable-WebSocket tag fan-out, statelessness (no queue/replay), sensitive-data logging | No (runs inside `workerd` via `@cloudflare/vitest-plugin`, not a real device) |
+| Unit — Core domain | `app/AdyenOutLoud.Tests` | Announcement playback, relay protocol parsing, relay configuration/endpoint derivation, connection retry/backoff | No |
 | Architecture | `app/AdyenOutLoud.ArchitectureTests` | Dependency-direction rules (see [`docs/quality.md`](quality.md)) | No |
 | UI smoke (documented, not yet automated) | — | See [UI smoke scenarios](#ui-smoke-scenarios-manual-today) below | Yes |
 
@@ -22,7 +22,7 @@ threshold applies to a given file, not just the number.
 **.NET (`AdyenOutLoud.Core` only):** `scripts/dotnet-coverage.sh` — 90% line / 85% branch floor.
 Only `AdyenOutLoud.Core` is coverage-gated: it holds the project's actual business logic
 (announcement composition, localization, relay configuration, retry/backoff). The MAUI head project
-(`AdyenOutLoud`) is thin platform-adapter code around MAUI/OS APIs (`TextToSpeech`,
+(`AdyenOutLoud`) is thin platform-adapter code around MAUI/OS APIs (`Plugin.Maui.Audio`,
 `SecureStorage`, `Preferences`, `ClientWebSocket`) that isn't meaningfully unit-testable without
 either a device/emulator or so much mocking of platform statics that the test would verify the
 mock, not the code — see [UI smoke scenarios](#ui-smoke-scenarios-manual-today) for how that layer
@@ -88,8 +88,7 @@ blocks directly cover the scenarios that matter now that there's no persistence 
 against (see [ADR 0007](adr/0007-display-only-stateless-company-scoped-relay.md)):
 
 - A successful Display notification is delivered only to the socket(s) tagged with the matching
-  terminal serial — a different terminal, or a different company entirely (even reusing the same
-  terminal serial), receives nothing.
+  terminal serial — a different terminal receives nothing.
 - A declined Display notification is never delivered.
 - A notification ingested with no connected socket for its terminal is silently dropped — a socket
   that connects *after* ingest does not receive it (no queue, no replay).
@@ -107,25 +106,14 @@ in-process simulation, not a deployed Worker.
 
 ## Localization
 
-`AnnouncementContractTests.FourLanguagesHaveIndependentResxAnnouncements` (and its sibling
-`EveryLanguageHasAnIndependentTestAnnouncement`) assert that all four languages (`en`, `zh`, `ms`,
-`ta`) have independent, non-empty `.resx` entries for the fixed "payment successful" announcement
-and that `ResxLocalizationService` correctly falls back to each culture's template. The TTS
-voice-*selection* algorithm — given a requested locale like `zh-SG`, pick the best installed voice
-— is tested separately and independently of any device or emulator in `SpeechLocaleSelectorTests`
-(`app/AdyenOutLoud.Tests/SpeechLocaleSelectorTests.cs`), covering exact-locale match, same-base-language
-fallback (e.g. `zh-SG` requested, only `zh-CN` installed), fallback to the platform's first reported
-voice when no language match exists, case/separator-insensitive matching, and the "no voices
-reported at all" case. This is what section 40 of the original hardening brief asked for:
-preferred/fallback ordering for `en-SG`/`zh-SG`/`ms-SG`/`ta-SG` and fallback locales, tested apart
-from the native TTS invocation itself (which `MauiSpeechService` still owns, and which can only be
-exercised on an actual device/emulator — see [UI smoke scenarios](#ui-smoke-scenarios-manual-today)).
-
-What is **not** tested, and can't be by an automated suite: whether the `zh`/`ms`/`ta` sentence
-*translations themselves* are natural, correct, and appropriately formal for a retail context. They
-were written for this project, not by a certified translator — have a native speaker review
-`app/AdyenOutLoud.Core/Resources/Strings.{zh,ms,ta}.resx` before a live deployment. See
-[ADR 0006](adr/0006-on-device-text-to-speech.md).
+Announcements are pre-recorded MP3s (`app/AdyenOutLoud/Resources/Raw/{PaymentReceived,TestAnnouncement}-{EN,ZH,MS,TA}.mp3`),
+so there is no text or voice-selection logic to test.
+`MauiSourceBoundaryTests.EveryLanguageHasBothRecordingsBundledWithTheApp` asserts every language has
+both recordings, and `AnnouncementContractTests.TheRecordingForTheSelectedLanguageIsPlayed` asserts
+the app asks for the recording matching the selected language. What no automated suite can check is
+whether the recordings themselves sound natural and are appropriate for a retail context — have a
+native speaker of each language listen to them before a live deployment. See
+[ADR 0008](adr/0008-single-shared-relay-and-prerecorded-audio.md).
 
 ## UI smoke scenarios (manual today)
 
@@ -137,10 +125,10 @@ PR is worse than no UI suite (see [`docs/quality.md`](quality.md) on not chasing
 own sake):
 
 - App starts and shows the relay-configuration form (empty on first launch).
-- A relay URL and terminal serial number can be entered and saved; they're pre-filled from storage
+- A terminal serial number can be entered and saved; they're pre-filled from storage
   on the next launch.
 - Language can be changed; the selection persists.
-- The test-speech command can be triggered and speaks the selected language's test phrase.
+- The test-speech command can be triggered and plays the selected language's test recording.
 - Connection state (CONNECTING / LISTENING / NEEDS ATTENTION) is visible and updates correctly.
 - **Background execution** (see [`docs/architecture.md`](architecture.md#client-architecture-maui)):
   on Android, backgrounding the app shows a persistent "listening" notification and a payment is

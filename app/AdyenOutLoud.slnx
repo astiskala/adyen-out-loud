@@ -3,4 +3,6 @@
   <Project Path="AdyenOutLoud/AdyenOutLoud.csproj" />
   <Project Path="AdyenOutLoud.Tests/AdyenOutLoud.Tests.csproj" />
   <Project Path="AdyenOutLoud.ArchitectureTests/AdyenOutLoud.ArchitectureTests.csproj" />
+  <Project Path="AdyenOutLoud.E2ETests/AdyenOutLoud.E2ETests.csproj" />
+  <Project Path="AdyenOutLoud.UITests/AdyenOutLoud.UITests.csproj" />
 </Solution>

@@ -23,39 +23,30 @@
                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
                             <BoxView WidthRequest="12" HeightRequest="12" Color="{Binding StatusColor}" CornerRadius="6" VerticalOptions="Center"
                                      AutomationProperties.IsInAccessibleTree="False" />
-                            <Label Grid.Column="1" Text="{Binding StatusTitle}" Style="{StaticResource StatusTitle}" />
+                            <Label Grid.Column="1" Text="{Binding StatusTitle}" Style="{StaticResource StatusTitle}" AutomationId="StatusTitle" />
                         </Grid>
-                        <Label Text="{Binding StatusDetail}" Style="{StaticResource Body}" />
+                        <Label Text="{Binding StatusDetail}" Style="{StaticResource Body}" AutomationId="StatusDetail" />
                         <Label Text="CONNECTING  /  LISTENING  /  NEEDS ATTENTION" Style="{StaticResource StateLegend}" />
                     </VerticalStackLayout>
                 </Border>
 
                 <VerticalStackLayout Spacing="14">
-                    <Label Text="RELAY CONFIGURATION" Style="{StaticResource SectionTitle}" />
-                    <Label Text="Ask whoever manages your Adyen account for the relay URL they configured as this company's Display webhook, then enter this specific device's terminal serial number below." Style="{StaticResource Body}" />
-                    <Label Text="RELAY URL" Style="{StaticResource FieldLabel}" />
-                    <Border Style="{StaticResource InputBorder}">
-                        <Entry Text="{Binding RelayUrlInput}"
-                               Placeholder="https://relay.example.com/v1/c/..."
-                               Keyboard="Url"
-                               TextColor="{StaticResource Paper}"
-                               FontFamily="monospace"
-                               SemanticProperties.Description="Relay URL" />
-                    </Border>
+                    <Label Text="TERMINAL SETUP" Style="{StaticResource SectionTitle}" />
+                    <Label Text="Enter this device's terminal serial number. Your Adyen account also needs the Display webhook pointed at the relay; the set-up guide shows how." Style="{StaticResource Body}" />
+                    <Button Text="Open set-up guide" Command="{Binding OpenSetupGuideCommand}"
+                            SemanticProperties.Description="Open the online set-up guide" />
                     <Label Text="TERMINAL SERIAL NUMBER" Style="{StaticResource FieldLabel}" />
                     <Border Style="{StaticResource InputBorder}">
                         <Entry Text="{Binding TerminalSerialInput}"
+                               BackgroundColor="Transparent"
                                Placeholder="324688170"
                                TextColor="{StaticResource Paper}"
                                FontFamily="monospace"
                                SemanticProperties.Description="Terminal serial number" />
                     </Border>
                     <Button Text="Save" Command="{Binding SaveConfigurationCommand}"
-                            SemanticProperties.Description="Save the relay configuration" />
-                    <Label Text="{Binding ConfigurationStatus}" Style="{StaticResource Caption}" />
-                    <Border Style="{StaticResource WarningPanel}">
-                        <Label Text="SECRET URL: Anyone with this relay URL can send payment announcements to every terminal in this company. Share it only through your webhook configuration." Style="{StaticResource WarningText}" />
-                    </Border>
+                            SemanticProperties.Description="Save the terminal serial number" />
+                    <Label Text="{Binding ConfigurationStatus}" Style="{StaticResource Caption}" AutomationId="ConfigurationStatus" />
                 </VerticalStackLayout>
 
                 <VerticalStackLayout Spacing="12">
@@ -71,20 +62,20 @@
                     </Border>
                     <Label Text="VOICE CHECK" Style="{StaticResource FieldLabel}" Margin="0,8,0,0" />
                     <Button Text="Test voice" Command="{Binding TestVoiceCommand}"
-                            SemanticProperties.Description="Speak a test announcement in the selected language" />
+                            SemanticProperties.Description="Play a test announcement in the selected language" />
                 </VerticalStackLayout>
 
                 <Border Style="{StaticResource Panel}">
                     <VerticalStackLayout Spacing="8">
                         <Label Text="LATEST EVENT" Style="{StaticResource FieldLabel}" />
-                        <Label Text="{Binding LatestEvent}" Style="{StaticResource LatestEvent}" />
+                        <Label Text="{Binding LatestEvent}" Style="{StaticResource LatestEvent}" AutomationId="LatestEvent" />
                     </VerticalStackLayout>
                 </Border>
 
                 <Border Style="{StaticResource DiagnosticPanel}">
                     <VerticalStackLayout Spacing="7">
-                        <Label Text="VOICE FALLBACK DIAGNOSTIC" Style="{StaticResource FieldLabel}" />
-                        <Label Text="{Binding Diagnostic}" Style="{StaticResource Diagnostic}" />
+                        <Label Text="PLAYBACK STATUS" Style="{StaticResource FieldLabel}" />
+                        <Label Text="{Binding Diagnostic}" Style="{StaticResource Diagnostic}" AutomationId="Diagnostic" />
                     </VerticalStackLayout>
                 </Border>
             </VerticalStackLayout>

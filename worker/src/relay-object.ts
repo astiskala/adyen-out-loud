@@ -3,8 +3,9 @@ import { parseDisplayNotification } from "./adyen/display-parser";
 import type { DisplayState, OutboundEnvelope } from "./adyen/models";
 
 /**
- * Durable Object that manages WebSocket connections for a single company.
- * Routes payment notifications from Adyen webhooks to connected terminals via WebSocket.
+ * Durable Object that manages WebSocket connections for all terminals.
+ * Routes payment notifications from Adyen webhooks to connected terminals via WebSocket,
+ * dropping any notification whose terminal has no connected app.
  */
 export class RelayObject extends DurableObject<Env> {
   /**

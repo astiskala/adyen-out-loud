@@ -1,16 +1,14 @@
 # Adyen Out Loud
 
-[![Quality](https://github.com/OWNER/REPO/actions/workflows/quality.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/quality.yml)
-[![CodeQL](https://github.com/OWNER/REPO/actions/workflows/codeql.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/codeql.yml)
+[![Quality](https://github.com/astiskala/adyen-out-loud/actions/workflows/quality.yml/badge.svg)](https://github.com/astiskala/adyen-out-loud/actions/workflows/quality.yml)
+[![CodeQL](https://github.com/astiskala/adyen-out-loud/actions/workflows/codeql.yml/badge.svg)](https://github.com/astiskala/adyen-out-loud/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-> Badges above point to `OWNER/REPO` placeholders — update them once this repository has a GitHub
-> remote (see [`docs/repository-settings.md`](docs/repository-settings.md)).
 
 Turn a successful Adyen terminal payment into an instant spoken "Payment successful" confirmation
 on a phone, tablet, or PC near the till — in English, Chinese, Malay, or Tamil. No account to
-create, no backend to run: whoever manages the Adyen account pastes one URL into Adyen once, and
-each terminal's app is configured with that URL plus its own terminal serial number.
+create, no backend to run, no URL to enter in the app: whoever manages the Adyen account adds one
+webhook URL in the Customer Area once (`https://adyenoutloud.adam-eea.workers.dev/webhook`), and
+each terminal's app only needs its terminal serial number.
 
 > **Unofficial project.** "Adyen" is a trademark of Adyen N.V. This is an independent, open-source
 > project, not affiliated with, endorsed by, or supported by Adyen. See
@@ -19,22 +17,21 @@ each terminal's app is configured with that URL plus its own terminal serial num
 ## How it works
 
 ```text
-Adyen terminal ──▶ Cloudflare Worker ──▶ per-company Durable Object ──▶ WebSocket ──▶ MAUI app ──▶ on-device TTS
+Adyen terminal ──▶ Cloudflare Worker ──▶ Durable Object ──▶ WebSocket ──▶ MAUI app ──▶ bundled recording
 ```
 
-Adyen's terminal sends a Display webhook straight to the Worker; the Worker routes it, by company
-and then by terminal serial number, to the right device's live WebSocket connection — no persisted
-state anywhere. See [`docs/architecture.md`](docs/architecture.md) for the full picture, including
+Adyen's terminal sends a Display webhook straight to the Worker; the Worker routes it, by terminal
+serial number, to the right device's live WebSocket connection (dropping it if no app is
+connected) — no persisted state anywhere. See [`docs/architecture.md`](docs/architecture.md) for the full picture, including
 a diagram, [`docs/protocol.md`](docs/protocol.md) for the wire protocol, and
-[ADR 0007](docs/adr/0007-display-only-stateless-company-scoped-relay.md) for why this design is
-display-only and stateless.
+[ADR 0007](docs/adr/0007-display-only-stateless-company-scoped-relay.md) and
+[ADR 0008](docs/adr/0008-single-shared-relay-and-prerecorded-audio.md) for why this design is
+display-only, stateless, and uses one shared relay.
 
-There is no signup step and no shared backend database: one relay URL is generated per Adyen
-company account and configured as that company's Display webhook; every terminal's app instance is
-configured, at runtime, with that URL plus its own terminal serial number — no Customer Area access
-is needed to install and configure the app itself. See
-[`docs/adyen-setup.md`](docs/adyen-setup.md) for the setup flow — and, importantly,
-[`docs/threat-model.md`](docs/threat-model.md) for what that design trades away.
+There is no signup step and no backend database: Adyen's Display webhook is pointed at the one shared
+relay URL, and every terminal's app instance only needs its own terminal serial number — no
+Customer Area access is needed to install the app. See the [set-up guide](docs/index.md) — and,
+importantly, [`docs/threat-model.md`](docs/threat-model.md) for what that design trades away.
 
 ## Supported platforms
 
@@ -43,16 +40,15 @@ Android, iOS, macOS (Mac Catalyst), and Windows — one .NET MAUI codebase
 
 ## Supported languages
 
-English, Chinese (Simplified), Malay, and Tamil — announcement text and TTS locale selection, both
-tested independently of any device (see [`docs/testing.md`](docs/testing.md)). The `zh`/`ms`/`ta`
-translations should be reviewed by a native speaker before a live retail deployment — see
-[ADR 0006](docs/adr/0006-on-device-text-to-speech.md).
+English, Chinese (Simplified), Malay, and Tamil — played from pre-recorded clips bundled with the
+app (`app/AdyenOutLoud/Resources/Raw`), not synthesized on the device — see
+[ADR 0008](docs/adr/0008-single-shared-relay-and-prerecorded-audio.md).
 
 ## Current limitations
 
-- **No HMAC webhook signature verification yet** — the relay URL's high entropy is the only
-  authorization mechanism in v1. Read [`docs/threat-model.md`](docs/threat-model.md) before
-  relying on this for anything where a fabricated announcement would be costly.
+- **No authentication or HMAC webhook signature verification** — the terminal serial number is the
+  only routing key. Read [`docs/threat-model.md`](docs/threat-model.md) before relying on this for
+  anything where a fabricated announcement would be costly.
 - **No announcement richer than "payment successful"** — Adyen's Display API doesn't carry payment
   method or amount, and there's no correlated second webhook anymore — see
   [ADR 0007](docs/adr/0007-display-only-stateless-company-scoped-relay.md).
@@ -64,27 +60,25 @@ translations should be reviewed by a native speaker before a live retail deploym
   Appium yet.
 - **No release automation yet** — [`docs/releasing.md`](docs/releasing.md) documents the intended
   process; today it's entirely manual.
-- The `zh`/`ms`/`ta` translations were written for this project, not by a certified translator —
-  see [Supported languages](#supported-languages).
 
 ## Security model
 
 Read [`docs/threat-model.md`](docs/threat-model.md) in full before deploying this for anyone other
-than yourself. The short version: the relay URL is a **bearer secret**, shared across every
-terminal in an Adyen company account — treat it exactly like a password. Possession of it is
-sufficient to send that company's terminals fabricated payment announcements. This is a deliberate
-v1 design choice, documented in detail (including what it does and doesn't protect against) rather
-than glossed over.
+than yourself. The short version: the relay is one shared public URL with **no
+authentication** — the terminal serial number (which is not a secret) is the only routing key, so
+anyone who knows a serial can send a fabricated announcement to it or listen to its feed. This is a
+deliberate design choice, documented in detail (including what it does and doesn't protect against)
+rather than glossed over.
 
 ## Adyen configuration
 
-See [`docs/adyen-setup.md`](docs/adyen-setup.md) — generating a company token, configuring it as
-the Display webhook once, and entering it plus a terminal serial number in each app instance.
+See the [set-up guide](https://astiskala.github.io/adyen-out-loud/) ([`docs/index.md`](docs/index.md)) — adding the Display webhook
+once, and entering a terminal serial number in each app instance. The app links to the same guide.
 
 ## Cloudflare architecture
 
 A single Worker (`worker/src/index.ts`) fronting one Durable Object class (`RelayObject`) — one
-object per Adyen company, holding no persisted state, using hibernatable WebSockets tagged by
+object for all terminals, holding no persisted state, using hibernatable WebSockets tagged by
 terminal serial to route an ingested notification to the right device. See
 [`docs/architecture.md`](docs/architecture.md) and
 [ADR 0002](docs/adr/0002-use-cloudflare-durable-objects.md).
@@ -107,8 +101,8 @@ dotnet workload install android   # or ios/maccatalyst (macOS + Xcode 26.6) / wi
 dotnet build AdyenOutLoud/AdyenOutLoud.csproj -f net10.0-android
 ```
 
-The relay URL and terminal serial number are entered in the app's own UI at runtime, not compiled
-in — see [`docs/adyen-setup.md`](docs/adyen-setup.md). Full prerequisites and exact versions:
+Only the terminal serial number is entered in the app; the relay URL is compiled in (Debug builds
+honour an `ADYEN_OUT_LOUD_RELAY_URL` override) — see the [set-up guide](docs/index.md). Full prerequisites and exact versions:
 [`docs/development.md`](docs/development.md).
 
 ## Build commands

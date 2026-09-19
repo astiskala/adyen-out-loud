@@ -15,11 +15,10 @@ public interface IRelayConfigurationService
     Task<RelayConfiguration?> GetAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Saves a new relay configuration.
+    /// Saves the terminal serial number and returns the resulting relay configuration.
     /// </summary>
-    /// <param name="baseUrl">The base HTTPS URL of the relay service.</param>
     /// <param name="terminalSerial">The terminal serial number this app is configured for.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>The saved relay configuration with computed WebSocket URL.</returns>
-    Task<RelayConfiguration> SaveAsync(Uri baseUrl, string terminalSerial, CancellationToken cancellationToken = default);
+    Task<RelayConfiguration> SaveAsync(string terminalSerial, CancellationToken cancellationToken = default);
 }

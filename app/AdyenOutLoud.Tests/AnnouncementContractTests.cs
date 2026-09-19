@@ -8,78 +8,69 @@ namespace AdyenOutLoud.Tests;
 public sealed class AnnouncementContractTests
 {
     [Fact]
-    public async Task NewEventIsPersistedThenLocalizedThenSpoken()
+    public async Task NewEventIsPersistedThenPlayed()
     {
         var calls = new List<string>();
-        var service = Create(new Settings(calls), new Speech(calls), new Localization(calls));
+        var service = Create(new Settings(calls), new Player(calls));
         var result = await service.AnnounceAsync(Message(), CancellationToken.None);
 
-        Assert.Equal(["persist", "localize", "speak"], calls);
-        Assert.True(result.WasSpoken);
+        Assert.Equal(["persist", "play"], calls);
+        Assert.True(result.WasPlayed);
     }
 
     [Fact]
-    public async Task DuplicateEventIsNotSpokenAgain()
+    public async Task DuplicateEventIsNotPlayedAgain()
     {
         var calls = new List<string>();
-        var service = Create(new Settings(calls, isNew: false), new Speech(calls), new Localization(calls));
+        var service = Create(new Settings(calls, isNew: false), new Player(calls));
         var result = await service.AnnounceAsync(Message(), CancellationToken.None);
 
         Assert.Equal(["persist"], calls);
         Assert.True(result.WasDuplicate);
-        Assert.False(result.WasSpoken);
+        Assert.False(result.WasPlayed);
     }
 
     [Fact]
-    public async Task TextToSpeechFailureIsRecordedWithoutThrowing()
+    public async Task PlaybackFailureIsRecordedWithoutThrowing()
     {
         var calls = new List<string>();
-        var service = Create(new Settings(calls), new FailingSpeech(calls), new Localization(calls));
+        var service = Create(new Settings(calls), new FailingPlayer(calls));
         var result = await service.AnnounceAsync(Message(), CancellationToken.None);
 
-        Assert.Equal(["persist", "localize", "speak"], calls);
-        Assert.False(result.WasSpoken);
-        Assert.Contains("voice failed", result.Detail, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(["persist", "play"], calls);
+        Assert.False(result.WasPlayed);
+        Assert.Contains("playback failed", result.Detail, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void FourLanguagesHaveIndependentResxAnnouncements()
+    public async Task TheRecordingForTheSelectedLanguageIsPlayed()
     {
-        var localization = new ResxLocalizationService();
-        Assert.Collection(AppLanguage.All,
-            language => Assert.Equal("Payment successful.", localization.CreatePaymentAnnouncement(Message(), language)),
-            language => Assert.Equal("付款成功。", localization.CreatePaymentAnnouncement(Message(), language)),
-            language => Assert.Equal("Bayaran berjaya.", localization.CreatePaymentAnnouncement(Message(), language)),
-            language => Assert.Equal("பணம் செலுத்துதல் வெற்றிகரமாக முடிந்தது.", localization.CreatePaymentAnnouncement(Message(), language)));
-    }
+        var calls = new List<string>();
+        var player = new Player(calls);
+        var service = Create(new Settings(calls) { SelectedLanguage = AppLanguage.Tamil }, player);
 
-    [Fact]
-    public void EveryLanguageHasAnIndependentTestAnnouncement()
-    {
-        var localization = new ResxLocalizationService();
-        foreach (var language in AppLanguage.All)
-        {
-            Assert.False(string.IsNullOrWhiteSpace(localization.CreateTestAnnouncement(language)));
-        }
+        await service.AnnounceAsync(Message(), CancellationToken.None);
+
+        Assert.Equal([(AnnouncementSound.PaymentReceived, AppLanguage.Tamil)], player.Played);
     }
 
     [Fact]
     public async Task AnObserverExceptionDuringAnnouncementCompletedDoesNotPropagate()
     {
         var calls = new List<string>();
-        var service = Create(new Settings(calls), new Speech(calls), new Localization(calls));
+        var service = Create(new Settings(calls), new Player(calls));
         service.AnnouncementCompleted += (_, _) => throw new InvalidOperationException("observer failed");
 
         var result = await service.AnnounceAsync(Message(), CancellationToken.None);
 
-        Assert.True(result.WasSpoken);
+        Assert.True(result.WasPlayed);
     }
 
-    private static RelayConnectionService Create(ISettingsService settings, ITextToSpeechService speech, ILocalizationService localization)
+    private static RelayConnectionService Create(ISettingsService settings, IAnnouncementPlayer player)
     {
         var configService = new FakeConfigService();
         var factory = new FakeConnectionFactory();
-        return new RelayConnectionService(configService, factory, settings, speech, localization);
+        return new RelayConnectionService(configService, factory, settings, player);
     }
 
     internal static PaymentMessage Message() => new(
@@ -96,34 +87,30 @@ public sealed class AnnouncementContractTests
         }
     }
 
-    private sealed class Speech(List<string> calls) : ITextToSpeechService
+    private sealed class Player(List<string> calls) : IAnnouncementPlayer
     {
-        public Task<SpeechDiagnostic> SpeakAsync(string text, AppLanguage language, CancellationToken cancellationToken)
+        public List<(AnnouncementSound, AppLanguage)> Played { get; } = [];
+        public Task PlayAsync(AnnouncementSound sound, AppLanguage language, CancellationToken cancellationToken)
         {
-            calls.Add("speak");
-            return Task.FromResult(new SpeechDiagnostic(language.Locale, language.Locale, "voice ok"));
+            calls.Add("play");
+            Played.Add((sound, language));
+            return Task.CompletedTask;
         }
     }
 
-    private sealed class FailingSpeech(List<string> calls) : ITextToSpeechService
+    private sealed class FailingPlayer(List<string> calls) : IAnnouncementPlayer
     {
-        public Task<SpeechDiagnostic> SpeakAsync(string text, AppLanguage language, CancellationToken cancellationToken)
+        public Task PlayAsync(AnnouncementSound sound, AppLanguage language, CancellationToken cancellationToken)
         {
-            calls.Add("speak");
+            calls.Add("play");
             throw new InvalidOperationException("unavailable");
         }
-    }
-
-    private sealed class Localization(List<string> calls) : ILocalizationService
-    {
-        public string CreatePaymentAnnouncement(PaymentMessage message, AppLanguage language) { calls.Add("localize"); return "payment"; }
-        public string CreateTestAnnouncement(AppLanguage language) => "test";
     }
 
     private sealed class FakeConfigService : IRelayConfigurationService
     {
         public Task<RelayConfiguration?> GetAsync(CancellationToken cancellationToken = default) => Task.FromResult<RelayConfiguration?>(null);
-        public Task<RelayConfiguration> SaveAsync(Uri baseUrl, string terminalSerial, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<RelayConfiguration> SaveAsync(string terminalSerial, CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }
 
     private sealed class FakeConnectionFactory : IRelayConnectionFactory

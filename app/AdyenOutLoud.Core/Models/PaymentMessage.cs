@@ -18,29 +18,19 @@ public sealed record PaymentMessage(
     string PspReference);
 
 /// <summary>
-/// Diagnostic information from a text-to-speech operation.
-/// </summary>
-/// <param name="RequestedLocale">The locale that was requested for speech.</param>
-/// <param name="SelectedLocale">The locale actually used by the TTS engine, or null if unavailable.</param>
-/// <param name="Message">Human-readable diagnostic message.</param>
-public sealed record SpeechDiagnostic(string RequestedLocale, string? SelectedLocale, string Message);
-
-/// <summary>
 /// Result of a payment announcement attempt.
 /// </summary>
 /// <param name="EventId">The event identifier from the payment message.</param>
 /// <param name="WasDuplicate">True if this event was already announced (duplicate).</param>
-/// <param name="WasSpoken">True if the announcement was successfully spoken.</param>
+/// <param name="WasPlayed">True if the announcement clip was played.</param>
 /// <param name="Detail">Human-readable detail about the result.</param>
 /// <param name="Message">The original payment message.</param>
-/// <param name="Speech">Speech diagnostic info, or null if not spoken.</param>
 public sealed record AnnouncementResult(
     string EventId,
     bool WasDuplicate,
-    bool WasSpoken,
+    bool WasPlayed,
     string Detail,
-    PaymentMessage Message,
-    SpeechDiagnostic? Speech);
+    PaymentMessage Message);
 
 /// <summary>
 /// Represents the current state of the relay connection.

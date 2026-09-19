@@ -7,7 +7,7 @@ Use [GitHub Issues](../../issues) for:
 - Reproducible bugs in the app or the Worker (use the [bug report template](.github/ISSUE_TEMPLATE/bug_report.yml))
 - Feature requests (use the [feature request template](.github/ISSUE_TEMPLATE/feature_request.yml))
 
-Please don't paste your webhook URL, instance token, or any real payment data into an issue — see
+Please don't paste any real payment data into an issue — see
 the warnings in the bug report template and [`docs/threat-model.md`](docs/threat-model.md).
 
 ## Security vulnerabilities
@@ -31,6 +31,6 @@ For any of the above, contact [Adyen Support](https://www.adyen.com/contact) dir
 ## Questions about how something works
 
 Check [`docs/`](docs/) first — [`docs/architecture.md`](docs/architecture.md),
-[`docs/protocol.md`](docs/protocol.md), and [`docs/adyen-setup.md`](docs/adyen-setup.md) cover most
+[`docs/protocol.md`](docs/protocol.md), and [`docs/index.md`](docs/index.md) cover most
 "how does X work" questions. If the docs don't answer it, a GitHub issue (not a feature request —
 just ask) is fine.

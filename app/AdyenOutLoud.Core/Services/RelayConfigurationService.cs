@@ -4,25 +4,27 @@ using AdyenOutLoud.Models;
 namespace AdyenOutLoud.Services;
 
 /// <summary>
-/// Service for managing relay configuration (retrieve and save).
+/// Service for managing relay configuration (retrieve and save the terminal serial).
 /// </summary>
-public sealed class RelayConfigurationService(IRelayConfigurationStore store) : IRelayConfigurationService
+/// <param name="store">Where the terminal serial is persisted.</param>
+/// <param name="relayUrl">The base HTTPS URL of the relay; the same for every installation.</param>
+public sealed class RelayConfigurationService(IRelayConfigurationStore store, Uri relayUrl) : IRelayConfigurationService
 {
     /// <inheritdoc />
     public async Task<RelayConfiguration?> GetAsync(CancellationToken cancellationToken = default)
     {
-        var saved = await store.GetAsync().ConfigureAwait(false);
-        return saved is { } value ? Build(value.BaseUrl, value.TerminalSerial) : null;
+        var serial = await store.GetAsync().ConfigureAwait(false);
+        return string.IsNullOrWhiteSpace(serial) ? null : Build(serial);
     }
 
     /// <inheritdoc />
-    public async Task<RelayConfiguration> SaveAsync(Uri baseUrl, string terminalSerial, CancellationToken cancellationToken = default)
+    public async Task<RelayConfiguration> SaveAsync(string terminalSerial, CancellationToken cancellationToken = default)
     {
-        var configuration = Build(baseUrl, terminalSerial);
-        await store.SetAsync(baseUrl, terminalSerial).ConfigureAwait(false);
+        var configuration = Build(terminalSerial);
+        await store.SetAsync(terminalSerial).ConfigureAwait(false);
         return configuration;
     }
 
-    private static RelayConfiguration Build(Uri baseUrl, string terminalSerial) =>
-        new(baseUrl, terminalSerial, RelayEndpointFactory.CreateWebSocketUrl(baseUrl, terminalSerial));
+    private RelayConfiguration Build(string terminalSerial) =>
+        new(terminalSerial, RelayEndpointFactory.CreateWebSocketUrl(relayUrl, terminalSerial));
 }

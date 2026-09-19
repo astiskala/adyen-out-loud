@@ -1,0 +1,51 @@
+name: Deploy Worker
+
+# Deploys the relay to Cloudflare (https://adyenoutloud.adam-eea.workers.dev) after the Worker's own
+# quality gate passes. Requires the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository secrets
+# (see docs/repository-settings.md). Pull requests never deploy.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "worker/**"
+      - ".github/workflows/deploy-worker.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Test and deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version-file: worker/.node-version
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+      - run: npm ci
+      - run: npm run quality
+      - name: Deploy to Cloudflare
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Smoke test the deployment
+        run: |
+          for attempt in 1 2 3 4 5; do
+            curl -fsS https://adyenoutloud.adam-eea.workers.dev/health && exit 0
+            sleep 5
+          done
+          exit 1

@@ -86,3 +86,14 @@ For contrast — these don't need a GitHub setting, they're already code:
 `permissions:`, SHA-pinned third-party actions, `concurrency` cancellation, job `timeout-minutes`),
 and a `.github/CODEOWNERS` file, not present today, if you add one once there's a team to route
 reviews to.
+
+## Deployment (Cloudflare Worker and GitHub Pages)
+
+- **Worker CD** — `.github/workflows/deploy-worker.yml` deploys `worker/` on every push to `main`
+  that touches it. Add two repository secrets (**Settings → Secrets and variables → Actions**):
+  `CLOUDFLARE_API_TOKEN` (a token with the *Edit Cloudflare Workers* template) and
+  `CLOUDFLARE_ACCOUNT_ID`. The workflow runs in a `production` environment; add required reviewers
+  there if you want a manual gate.
+- **Set-up guide** — GitHub Pages serves `docs/` from `main` (**Settings → Pages → Deploy from a
+  branch → `main` / `/docs`**), at <https://astiskala.github.io/adyen-out-loud/>. The app's "Open
+  set-up guide" button links there.

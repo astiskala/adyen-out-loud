@@ -89,10 +89,12 @@ npm run dev              # local Worker dev server (wrangler dev)
 
 ### Relay configuration
 
-The app's relay URL and terminal serial number are entered at runtime, in the app's own UI, and
-stored in platform secure storage — there is no build-time property to set (see
-[ADR 0007](adr/0007-display-only-stateless-company-scoped-relay.md)). `RelayEndpointFactory` rejects
-anything that isn't an HTTPS address with no query or fragment when the installer saves it.
+The relay URL is compiled in (`RelayEndpointFactory.DefaultBaseUrl`); only the terminal serial
+number is entered in the app and stored in platform secure storage (see
+[ADR 0008](adr/0008-single-shared-relay-and-prerecorded-audio.md)). Debug builds of the app honour an
+`ADYEN_OUT_LOUD_RELAY_URL` environment variable to point at another (HTTPS) relay; release builds
+ignore it. `RelayEndpointFactory` rejects anything that isn't an HTTPS address with no query or
+fragment.
 
 ## One-command quality checks
 
@@ -117,7 +119,7 @@ in CI, not locally before every commit.
 
 ## Adyen configuration
 
-See [`docs/adyen-setup.md`](adyen-setup.md) for configuring the Display webhook against a deployed
+See [`docs/index.md`](index.md) for configuring the Display webhook against a deployed
 Worker.
 
 ## Cloudflare deployment (local/manual)

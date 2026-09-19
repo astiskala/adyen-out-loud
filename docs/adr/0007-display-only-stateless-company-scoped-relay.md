@@ -1,7 +1,7 @@
 # 0007: Display-only, stateless, company-scoped relay
 
 ## Status
-Accepted
+Accepted; the company-token routing is superseded by [ADR 0008](0008-single-shared-relay-and-prerecorded-audio.md).
 
 ## Context
 Three constraints define the current architecture:

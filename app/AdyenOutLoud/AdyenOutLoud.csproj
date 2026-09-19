@@ -27,12 +27,14 @@
   <ItemGroup>
     <MauiIcon Include="Resources/AppIcon/appicon.svg" Color="#0B1014" />
     <MauiSplashScreen Include="Resources/Splash/splash.svg" Color="#0B1014" BaseSize="256,256" />
+    <MauiAsset Include="Resources/Raw/*.mp3" />
     <MauiXaml Update="**/*.xaml" Generator="MSBuild:Compile" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Maui.Controls" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" />
+    <PackageReference Include="Plugin.Maui.Audio" />
     <ProjectReference Include="../AdyenOutLoud.Core/AdyenOutLoud.Core.csproj" />
   </ItemGroup>
 </Project>

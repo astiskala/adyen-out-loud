@@ -13,8 +13,7 @@ public sealed class RelayConnectionService(
     IRelayConfigurationService configurationService,
     IRelayConnectionFactory connectionFactory,
     ISettingsService settings,
-    ITextToSpeechService textToSpeech,
-    ILocalizationService localization) : IRelayConnectionService, IAsyncDisposable
+    IAnnouncementPlayer player) : IRelayConnectionService, IAsyncDisposable
 {
     private readonly object _sync = new();
     private CancellationTokenSource? _runCancellation;
@@ -91,7 +90,7 @@ public sealed class RelayConnectionService(
             var found = await configurationService.GetAsync(cancellationToken).ConfigureAwait(false);
             if (found is null)
             {
-                SetStatus(RelayConnectionState.NeedsAttention, "Enter the relay URL and terminal serial number to start listening.");
+                SetStatus(RelayConnectionState.NeedsAttention, "Enter this device's terminal serial number to start listening.");
                 return;
             }
             configuration = found;
@@ -151,7 +150,7 @@ public sealed class RelayConnectionService(
     }
 
     /// <summary>
-    /// Announces a successful payment via text-to-speech.
+    /// Announces a successful payment by playing the pre-recorded clip.
     /// </summary>
     /// <param name="message">The payment message to announce.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
@@ -161,15 +160,14 @@ public sealed class RelayConnectionService(
         var isNew = await settings.TryReserveEventIdAsync(message.Id, DateTimeOffset.UtcNow, cancellationToken).ConfigureAwait(false);
         if (!isNew)
         {
-            return Complete(new(message.Id, true, false, "Duplicate; not announced again.", message, null));
+            return Complete(new(message.Id, true, false, "Duplicate; not announced again.", message));
         }
 
         try
         {
             var language = settings.SelectedLanguage;
-            var text = localization.CreatePaymentAnnouncement(message, language);
-            var diagnostic = await textToSpeech.SpeakAsync(text, language, cancellationToken).ConfigureAwait(false);
-            return Complete(new(message.Id, false, true, diagnostic.Message, message, diagnostic));
+            await player.PlayAsync(AnnouncementSound.PaymentReceived, language, cancellationToken).ConfigureAwait(false);
+            return Complete(new(message.Id, false, true, $"Played the {language.DisplayName} announcement.", message));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -177,7 +175,7 @@ public sealed class RelayConnectionService(
         }
         catch (Exception exception)
         {
-            return Complete(new(message.Id, false, false, $"Payment recorded; voice failed: {exception.Message}", message, null));
+            return Complete(new(message.Id, false, false, $"Payment recorded; playback failed: {exception.Message}", message));
         }
     }
 

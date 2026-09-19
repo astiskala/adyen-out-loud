@@ -13,21 +13,20 @@ namespace AdyenOutLoud.ViewModels;
 /// </summary>
 public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 {
+    private const string SetupGuideUrl = "https://astiskala.github.io/adyen-out-loud/";
     private readonly IRelayConnectionService _relay;
     private readonly IRelayConfigurationService _configuration;
-    private readonly ITextToSpeechService _textToSpeech;
-    private readonly ILocalizationService _localization;
+    private readonly IAnnouncementPlayer _player;
     private readonly ISettingsService _settings;
     private bool _isTestingVoice;
     private bool _isSavingConfig;
     private bool _initialized;
-    private string _relayUrlInput = string.Empty;
     private string _terminalSerialInput = string.Empty;
     private string _configurationStatus = string.Empty;
     private string _statusTitle = "CONNECTING";
     private string _statusDetail = "Preparing the payment listener...";
     private Color _statusColor = Color.FromArgb("#F7B955");
-    private string _diagnostic = "Run Test voice to inspect the selected installed voice.";
+    private string _diagnostic = "Run Test voice to hear the selected announcement.";
     private string _latestEvent = "No payment event received yet.";
 
     /// <summary>
@@ -35,20 +34,17 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     /// </summary>
     /// <param name="relay">The relay connection service.</param>
     /// <param name="configuration">The relay configuration service.</param>
-    /// <param name="textToSpeech">The text-to-speech service.</param>
-    /// <param name="localization">The localization service.</param>
+    /// <param name="player">The announcement player.</param>
     /// <param name="settings">The settings service.</param>
     public MainViewModel(
         IRelayConnectionService relay,
         IRelayConfigurationService configuration,
-        ITextToSpeechService textToSpeech,
-        ILocalizationService localization,
+        IAnnouncementPlayer player,
         ISettingsService settings)
     {
         _relay = relay;
         _configuration = configuration;
-        _textToSpeech = textToSpeech;
-        _localization = localization;
+        _player = player;
         _settings = settings;
         relay.StatusChanged += OnStatusChanged;
         relay.Diagnostic += OnDiagnostic;
@@ -92,11 +88,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     /// <summary>
-    /// Gets or sets the relay URL input.
-    /// </summary>
-    public string RelayUrlInput { get => _relayUrlInput; set => Set(ref _relayUrlInput, value); }
-
-    /// <summary>
     /// Gets or sets the terminal serial number input.
     /// </summary>
     public string TerminalSerialInput { get => _terminalSerialInput; set => Set(ref _terminalSerialInput, value); }
@@ -137,6 +128,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public ICommand TestVoiceCommand { get; }
 
     /// <summary>
+    /// Gets the command that opens the online set-up guide.
+    /// </summary>
+    public ICommand OpenSetupGuideCommand { get; } = new Command(async () => await Launcher.Default.OpenAsync(SetupGuideUrl));
+
+    /// <summary>
     /// Gets the command to save the configuration.
     /// </summary>
     public ICommand SaveConfigurationCommand { get; }
@@ -154,7 +150,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             var configuration = await _configuration.GetAsync();
             if (configuration is not null)
             {
-                RelayUrlInput = configuration.BaseUrl.AbsoluteUri;
                 TerminalSerialInput = configuration.TerminalSerial;
             }
             _initialized = true;
@@ -175,12 +170,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         ((Command)SaveConfigurationCommand).ChangeCanExecute();
         try
         {
-            if (!Uri.TryCreate(RelayUrlInput.Trim(), UriKind.Absolute, out var baseUrl))
-            {
-                ConfigurationStatus = "Enter a valid https:// relay URL.";
-                return;
-            }
-
             var terminalSerial = TerminalSerialInput.Trim();
             if (terminalSerial.Length == 0)
             {
@@ -188,8 +177,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                 return;
             }
 
+            // Save first: a rejected save must not tear down a working connection.
+            await _configuration.SaveAsync(terminalSerial);
             await _relay.StopAsync();
-            await _configuration.SaveAsync(baseUrl, terminalSerial);
             ConfigurationStatus = "Saved. Connecting...";
             _relay.Start();
         }
@@ -212,13 +202,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         try
         {
             var language = SelectedLanguage;
-            var result = await _textToSpeech.SpeakAsync(
-                _localization.CreateTestAnnouncement(language), language, CancellationToken.None);
-            Diagnostic = result.Message;
+            await _player.PlayAsync(AnnouncementSound.TestAnnouncement, language, CancellationToken.None);
+            Diagnostic = $"Played the {language.DisplayName} test announcement.";
         }
         catch (Exception exception)
         {
-            Diagnostic = $"Voice test failed: {exception.Message}";
+            Diagnostic = $"Test announcement failed: {exception.Message}";
         }
         finally
         {
@@ -251,7 +240,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         var payment = result.Message;
         LatestEvent = $"Terminal {payment.TerminalId} / {payment.OccurredAt.ToLocalTime():g}\nTransaction {payment.TransactionId} / PSP {payment.PspReference}\nEvent {payment.Id}";
-        Diagnostic = result.Speech?.Message ?? result.Detail;
+        Diagnostic = result.Detail;
     });
 
     private void Set<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)

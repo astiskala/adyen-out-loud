@@ -1,3 +1,4 @@
+using AdyenOutLoud.Models;
 using Xunit;
 
 namespace AdyenOutLoud.ArchitectureTests;
@@ -50,10 +51,9 @@ public sealed class MauiSourceBoundaryTests
             "new PaymentAnnouncementService(",
             "new RelayConfigurationService(",
             "new ClientWebSocketConnection(",
-            "new MauiSpeechService(",
+            "new MauiAudioPlayer(",
             "new SecureStorageRelayConfigurationStore(",
             "new PreferencesSettingsService(",
-            "new ResxLocalizationService(",
         };
 
         foreach (var file in Directory.EnumerateFiles(RepoPaths.MauiApp, "*.xaml.cs", SearchOption.AllDirectories))
@@ -62,6 +62,21 @@ public sealed class MauiSourceBoundaryTests
             var offending = forbiddenConstructors.Where(text.Contains).ToArray();
             Assert.True(offending.Length == 0,
                 $"{Path.GetFileName(file)} constructs services directly instead of using dependency injection: {string.Join(", ", offending)}.");
+        }
+    }
+
+    [Fact]
+    public void EveryLanguageHasBothRecordingsBundledWithTheApp()
+    {
+        var raw = Path.Combine(RepoPaths.MauiApp, "Resources", "Raw");
+        foreach (var language in AppLanguage.All)
+        {
+            foreach (var sound in Enum.GetValues<AnnouncementSound>())
+            {
+                var file = Path.Combine(raw, $"{sound}-{language.Code.ToUpperInvariant()}.mp3");
+                Assert.True(File.Exists(file), $"Missing recording: {file}");
+                Assert.True(new FileInfo(file).Length > 0, $"Empty recording: {file}");
+            }
         }
     }
 }

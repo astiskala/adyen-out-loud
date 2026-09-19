@@ -1,7 +1,7 @@
 # 0006: On-device text-to-speech, no network translation
 
 ## Status
-Accepted
+Superseded by [ADR 0008](0008-single-shared-relay-and-prerecorded-audio.md) — announcements are now pre-recorded MP3s.
 
 ## Context
 Announcements need to be spoken in the language the merchant's staff and customers expect —

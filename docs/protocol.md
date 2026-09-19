@@ -7,8 +7,8 @@ Worker can roll out before every app instance has updated).
 
 ## Transport
 
-`wss://<worker-host>/v1/c/<43-char-company-token>/t/<terminalSerial>/ws`. The client sends no
-hello, identity, or auth message — identity is carried entirely by the company token and terminal
+`wss://<worker-host>/ws/<terminalSerial>`. The client sends no
+hello, identity, or auth message — identity is carried entirely by the terminal
 serial in the URL path, which the Worker already validated during the HTTP upgrade. The connection
 is a pure server-to-client push (see [Client → server](#client--server) below) and exists whenever
 the app is running (see [`docs/architecture.md`](architecture.md#client-architecture-maui) for the

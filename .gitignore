@@ -52,3 +52,8 @@ Thumbs.db
 
 # --- Generated reports (reproducible from source; not checked in) ---
 /artifacts/
+
+# UI tests (scripts/ui-tests.sh)
+app/AdyenOutLoud.UITests/appium/.appium/
+app/AdyenOutLoud.UITests/appium/appium.log
+app/AdyenOutLoud.UITests/artifacts/

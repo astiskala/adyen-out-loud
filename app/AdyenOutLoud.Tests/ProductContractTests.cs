@@ -10,39 +10,43 @@ public sealed class ProductContractTests
         """;
 
     [Fact]
-    public void CompanyUrlWithTerminalSerialBuildsExactSecureWebSocketUrl()
+    public void RelayUrlWithTerminalSerialBuildsExactSecureWebSocketUrl()
     {
-        var url = RelayEndpointFactory.CreateWebSocketUrl(
-            new("https://relay.example.com/v1/c/abc_DEF-123"), "324688170");
-        Assert.Equal("wss://relay.example.com/v1/c/abc_DEF-123/t/324688170/ws", url.AbsoluteUri);
+        var url = RelayEndpointFactory.CreateWebSocketUrl(new("https://relay.example.com"), "324688170");
+        Assert.Equal("wss://relay.example.com/ws/324688170", url.AbsoluteUri);
     }
 
     [Fact]
-    public void CompanyUrlWithNonDefaultPortIsPreserved()
+    public void TheDefaultRelayIsTheHostedWorker()
     {
-        var url = RelayEndpointFactory.CreateWebSocketUrl(
-            new("https://relay.example.com:8443/v1/c/token"), "324688170");
-        Assert.Equal("wss://relay.example.com:8443/v1/c/token/t/324688170/ws", url.AbsoluteUri);
+        var url = RelayEndpointFactory.CreateWebSocketUrl(RelayEndpointFactory.DefaultBaseUrl, "324688170");
+        Assert.Equal("wss://adyenoutloud.adam-eea.workers.dev/ws/324688170", url.AbsoluteUri);
+    }
+
+    [Fact]
+    public void RelayUrlWithNonDefaultPortIsPreserved()
+    {
+        var url = RelayEndpointFactory.CreateWebSocketUrl(new("https://relay.example.com:8443"), "324688170");
+        Assert.Equal("wss://relay.example.com:8443/ws/324688170", url.AbsoluteUri);
     }
 
     [Fact]
     public void TerminalSerialIsUrlEscaped()
     {
-        var url = RelayEndpointFactory.CreateWebSocketUrl(
-            new("https://relay.example.com/v1/c/token"), "has space");
-        Assert.Equal("wss://relay.example.com/v1/c/token/t/has%20space/ws", url.AbsoluteUri);
+        var url = RelayEndpointFactory.CreateWebSocketUrl(new("https://relay.example.com"), "has space");
+        Assert.Equal("wss://relay.example.com/ws/has%20space", url.AbsoluteUri);
     }
 
     [Theory]
-    [InlineData("http://relay.example.com/v1/c/token")]
-    [InlineData("wss://relay.example.com/v1/c/token")]
-    [InlineData("https://relay.example.com/v1/c/token?x=1")]
-    public void CompanyUrlRejectsAnythingExceptAnHttpsAddress(string value) =>
+    [InlineData("http://relay.example.com")]
+    [InlineData("wss://relay.example.com")]
+    [InlineData("https://relay.example.com?x=1")]
+    public void RelayUrlRejectsAnythingExceptAnHttpsAddress(string value) =>
         Assert.Throws<ArgumentException>(() => RelayEndpointFactory.CreateWebSocketUrl(new(value), "324688170"));
 
     [Fact]
     public void EmptyTerminalSerialIsRejected() =>
-        Assert.Throws<ArgumentException>(() => RelayEndpointFactory.CreateWebSocketUrl(new("https://relay.example.com/v1/c/token"), ""));
+        Assert.Throws<ArgumentException>(() => RelayEndpointFactory.CreateWebSocketUrl(new("https://relay.example.com"), ""));
 
     [Fact]
     public void ProtocolTwoPaymentSucceededEnvelopeParsesEveryField()

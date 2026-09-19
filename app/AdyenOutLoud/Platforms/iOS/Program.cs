@@ -11,5 +11,5 @@ public static class Program
     /// Main entry point for iOS.
     /// </summary>
     /// <param name="args">Command line arguments.</param>
-    public static void Main(string[] args) => UIApplication.Main(args, null, typeof(AppDelegate));
+    public static void Main(string[] args) => UIApplication.Main(args, null, typeof(AppHost));
 }

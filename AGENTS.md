@@ -9,14 +9,14 @@ of them, please fix it).
 
 Adyen Out Loud turns a successful Adyen terminal payment into a spoken "Payment successful"
 confirmation on a nearby device. A Cloudflare Worker receives Adyen's Display webhook, routes it by
-company and terminal in a stateless Durable Object, and pushes a message over WebSocket to a .NET
-MAUI app (Android/iOS/macOS/Windows), which speaks it via on-device TTS in one of four languages
-(English, Chinese, Malay, Tamil). There is no backend account system — one relay URL is generated
-per Adyen company account, and each app instance is configured with that URL plus its own terminal
-serial number, which together route it to the right connection. Read
+terminal serial in a stateless Durable Object (dropping it if no app is connected), and pushes a
+message over WebSocket to a .NET MAUI app (Android/iOS/macOS/Windows), which plays a pre-recorded
+clip in one of four languages (English, Chinese, Malay, Tamil). There is no backend account system
+and one shared relay URL (`https://adyenoutloud.adam-eea.workers.dev`) compiled into the app; each
+app instance is configured only with its terminal serial number. Read
 [`docs/architecture.md`](docs/architecture.md) before making any non-trivial change; read
-[`docs/threat-model.md`](docs/threat-model.md) before touching anything related to the company
-token or webhook validation.
+[`docs/threat-model.md`](docs/threat-model.md) before touching anything related to routing or
+webhook validation.
 
 ## Repository map
 
@@ -159,14 +159,12 @@ Run, in this order, whatever subset applies to what you changed:
 
 Never:
 
-- Log the company token or the full relay URL, at any log level, anywhere — see
-  [`docs/security.md#logging-and-redaction`](docs/security.md#logging-and-redaction) (there's a
-  regression test for this on the Worker side; don't break it).
-- Commit credentials, a real relay URL, signing material, or Cloudflare/Apple/Android secrets.
+- Log raw payment payloads at any level — see
+  [`docs/security.md#logging-and-redaction`](docs/security.md#logging-and-redaction).
+- Commit credentials, signing material, or Cloudflare/Apple/Android secrets.
 - Weaken or disable TLS certificate validation.
 - Bypass payload/input validation "to make a test pass" — the validation is the thing under test.
-- Use non-cryptographic randomness (`System.Random`, `Math.random()`) for anything security-relevant
-  — company tokens use `RandomNumberGenerator`/`openssl rand`/`crypto.subtle`.
+- Use non-cryptographic randomness (`System.Random`, `Math.random()`) for anything security-relevant.
 
 ## Dependency policy
 

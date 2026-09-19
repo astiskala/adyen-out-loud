@@ -2,17 +2,17 @@
 
 Adyen Out Loud turns a successful terminal payment into a spoken confirmation on a phone, tablet,
 or PC near the till. There is no merchant backend to run and nothing to provision beyond pasting
-one URL into Adyen — a Cloudflare Worker is the entire server side, and each Adyen **company**
-account gets its own isolated Durable Object, shared by every terminal in that company.
+one URL into Adyen — a Cloudflare Worker is the entire server side: a single Durable Object holds
+every terminal's WebSocket, tagged by terminal serial.
 
 ## End-to-end flow
 
 ```mermaid
 flowchart TD
     T[Adyen terminal] -->|Display webhook: TENDER_FINAL| W[Cloudflare Worker]
-    W -->|POST /v1/c/company-token| DO[Durable Object: RelayObject, one per company]
+    W -->|POST /webhook| DO[Durable Object: RelayObject]
     DO -->|push to sockets tagged with the matching terminal serial| APP[MAUI app]
-    APP -->|"Payment successful" via on-device TTS| TTS[On-device TTS]
+    APP -->|"Payment successful" pre-recorded clip| AUDIO[Bundled MP3 playback]
 ```
 
 The Worker only ingests Adyen's Display notification (`SaleToPOIRequest.DisplayRequest`, event
@@ -23,58 +23,48 @@ notification type to correlate and nothing to persist — see
 [ADR 0007](adr/0007-display-only-stateless-company-scoped-relay.md) for why, including the
 trade-offs it deliberately accepts.
 
-## Company and terminal identity and routing
+## Terminal identity and routing
 
-There is no sign-up flow and no central database. Whoever has Adyen Customer Area access for a
-company generates one random token (`scripts/generate-company-token.sh`, or any equivalent 32
-cryptographically random bytes base64url-encoded into a 43-character string) and configures it as
-that company's **Display** webhook URL — the same URL for every terminal in the company:
+There is no sign-up flow, no per-company secret, and no central database. Whoever has Adyen Customer
+Area access configures one **Display** webhook, once, pointing at the shared relay:
 
 ```text
-Webhook:   https://<worker-host>/v1/c/<companyToken>
+Webhook:   https://adyenoutloud.adam-eea.workers.dev/webhook
 ```
 
-Each app instance is then configured, at runtime, with that same URL plus the specific device's
-**terminal serial number** — the part of Adyen's terminal ID after the model prefix (e.g.
-`324688170` from `V400m-324688170`). No Customer Area access is needed to install and configure the
-app itself — only to set up the company's webhook once. The app derives its WebSocket URL from the
-two:
+Each app instance is configured with only the device's **terminal serial number** — the part of
+Adyen's terminal ID after the model prefix (e.g. `324688170` from `V400m-324688170`). The relay URL
+is compiled into the app. It derives its WebSocket URL:
 
 ```text
-WebSocket: wss://<worker-host>/v1/c/<companyToken>/t/<terminalSerial>/ws
+WebSocket: wss://adyenoutloud.adam-eea.workers.dev/ws/<terminalSerial>
 ```
 
-The Worker never stores a token-to-Durable-Object mapping table. It derives the Durable Object's
-name deterministically as `SHA-256(companyToken)` (base64url), then calls
-`env.PAYMENT_CHANNELS.idFromName(name)`. The first request for a given token causes Cloudflare to
-create that Durable Object; every later request for the same token routes to the same object. Within that object, each terminal's WebSocket connection is tagged with its terminal serial
-(Cloudflare's hibernatable-WebSocket tag API — see below); ingesting a notification fans it out only
-to the connection(s) tagged with the matching serial, which the Worker recovers from the
-notification's `POIID` field. See [`docs/threat-model.md`](threat-model.md) for what this design
-deliberately does *not* protect against (the company token is a bearer secret, not an
-HMAC-verified webhook, and it's now shared across every terminal in the company).
+The Worker routes everything to a single Durable Object (`RELAY_OBJECT_NAME` in
+[`worker/src/ingress-rules.ts`](../worker/src/ingress-rules.ts)). Each terminal's WebSocket
+connection is tagged with its terminal serial (Cloudflare's hibernatable-WebSocket tag API); ingesting
+a notification fans it out only to connections tagged with the serial recovered from the
+notification's `POIID`. A notification for a terminal with no connected app is dropped. See
+[`docs/threat-model.md`](threat-model.md) for what this design deliberately does *not* protect
+against, and [ADR 0008](adr/0008-single-shared-relay-and-prerecorded-audio.md) for why.
 
 ## HTTP ingress ([`worker/src/index.ts`](../worker/src/index.ts))
 
 `fetch()` is intentionally thin: validate the request envelope, route, delegate.
 
-1. `GET /health` → `{"status":"ok"}`, no token required.
-2. `POST /v1/c/<companyToken>` (ingest) — token must match `^[A-Za-z0-9_-]{43}$` *and* decode to
-   exactly 32 bytes, `Content-Type` must be JSON, and the body is streamed with a 64 KiB hard cap
-   (rejecting oversized bodies before they reach the Durable Object). The body is checked for valid
-   JSON syntax here (a fast `400` for a malformed webhook), then forwarded to the Durable Object
-   unparsed — routing needs only the company token from the URL, not the notification's content.
-3. `GET /v1/c/<companyToken>/t/<terminalSerial>/ws` (WebSocket) — company token validated the same
-   way, terminal serial validated against `^[A-Za-z0-9_-]{1,64}$`, requires an `Upgrade: websocket`
-   header.
+1. `GET /health` → `{"status":"ok"}`.
+2. `POST /webhook` (ingest) — `Content-Type` must be JSON, and the body is streamed with a 64 KiB
+   hard cap (rejecting oversized bodies before they reach the Durable Object). The body is checked
+   for valid JSON syntax here (a fast `400` for a malformed webhook), then forwarded to the Durable
+   Object unparsed.
+3. `GET /ws/<terminalSerial>` (WebSocket) — the terminal serial is validated against
+   `^[A-Za-z0-9_-]{1,64}$` and an `Upgrade: websocket` header is required.
 
-Any other path, or a malformed company token or terminal serial, returns `404` — the Worker does
-not distinguish "wrong token" from "no such route" in its response, so the public surface can't be
-used to enumerate valid tokens.
+Any other path, or a malformed terminal serial, returns `404`.
 
 ## Durable Object ([`worker/src/relay-object.ts`](../worker/src/relay-object.ts))
 
-One `RelayObject` per company token — see [ADR 0002](adr/0002-use-cloudflare-durable-objects.md).
+A single `RelayObject` — see [ADR 0002](adr/0002-use-cloudflare-durable-objects.md).
 It holds **no durable state at all**: no SQLite tables, no alarm, nothing written to storage. `fetch()` handles two
 internal routes:
 
@@ -95,7 +85,7 @@ does not receive it later. This is a deliberate trade-off for statelessness — 
 ## WebSocket delivery
 
 The connection is a pure server-to-client push. The client sends no ACK, no hello, and no identity
-message — identity is carried entirely by the company token and terminal serial in the URL path,
+message — identity is carried entirely by the terminal serial in the URL path,
 which the Worker already validated during the HTTP upgrade. Any message a client does send is
 ignored (`webSocketMessage` is a no-op) — there's no server-side state left for an acknowledgment to
 reconcile against, so the protocol doesn't have one. See [`docs/protocol.md`](protocol.md) for the
@@ -105,20 +95,20 @@ exact wire format.
 
 ```text
 AdyenOutLoud.Core            (net10.0, no MAUI/platform reference — see ADR 0001)
-    Models/                  PaymentMessage, AppLanguage, VoiceLocale, RelayStatus,
+    Models/                  PaymentMessage, AppLanguage, AnnouncementSound, RelayStatus,
                               RelayConfiguration, ...
     Abstractions/            interfaces the MAUI project implements against platform APIs
     Services/                RelayConnectionService, PaymentAnnouncementService,
                               RelayConfigurationService, RelayProtocol (WS parsing),
-                              SpeechLocaleSelector, ResxLocalizationService, ...
-    Resources/Strings*.resx  localized "payment successful" announcement text (en, zh, ms, ta)
+                              IAnnouncementPlayer (abstraction), ...
 
 AdyenOutLoud                 (net10.0-android / -ios / -maccatalyst / -windows10.0.19041.0)
     ViewModels/MainViewModel  UI state + commands only, binds to Core abstractions via DI
-    Services/                 thin platform adapters: ClientWebSocketConnection, MauiSpeechService,
+    Services/                 thin platform adapters: ClientWebSocketConnection, MauiAudioPlayer,
                                SecureStorageRelayConfigurationStore, PreferencesSettingsService
     Platforms/<X>/            per-platform pieces, including BackgroundExecutionService (below)
                                and, on Android, PaymentListenerForegroundService
+    Resources/Raw/*.mp3        pre-recorded announcements (PaymentReceived/TestAnnouncement x EN, ZH, MS, TA)
     MainPage.xaml              compiled bindings (x:DataType), no business logic in code-behind
 ```
 

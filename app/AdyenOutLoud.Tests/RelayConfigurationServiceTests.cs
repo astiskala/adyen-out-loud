@@ -5,41 +5,43 @@ namespace AdyenOutLoud.Tests;
 
 public sealed class RelayConfigurationServiceTests
 {
+    private static readonly Uri Relay = new("https://relay.example.com");
+
     [Fact]
     public async Task GetAsyncReturnsNullWhenNothingIsStoredYet()
     {
-        var service = new RelayConfigurationService(new Store());
+        var service = new RelayConfigurationService(new Store(), Relay);
         Assert.Null(await service.GetAsync());
     }
 
     [Fact]
-    public async Task GetAsyncBuildsTheWebSocketUrlFromStoredValues()
+    public async Task GetAsyncBuildsTheWebSocketUrlFromTheStoredSerial()
     {
-        var store = new Store { Saved = (new("https://relay.example.com/v1/c/token"), "324688170") };
-        var service = new RelayConfigurationService(store);
+        var service = new RelayConfigurationService(new Store { Saved = "324688170" }, Relay);
 
         var configuration = await service.GetAsync();
 
         Assert.NotNull(configuration);
-        Assert.Equal("wss://relay.example.com/v1/c/token/t/324688170/ws", configuration!.WebSocketUrl.AbsoluteUri);
+        Assert.Equal("324688170", configuration!.TerminalSerial);
+        Assert.Equal("wss://relay.example.com/ws/324688170", configuration.WebSocketUrl.AbsoluteUri);
     }
 
     [Fact]
     public async Task SaveAsyncPersistsAndReturnsTheNewConfiguration()
     {
         var store = new Store();
-        var service = new RelayConfigurationService(store);
+        var service = new RelayConfigurationService(store, Relay);
 
-        var configuration = await service.SaveAsync(new("https://relay.example.com/v1/c/token"), "324688170");
+        var configuration = await service.SaveAsync("324688170");
 
-        Assert.Equal(("https://relay.example.com/v1/c/token", "324688170"), (store.Saved!.Value.BaseUrl.AbsoluteUri, store.Saved.Value.TerminalSerial));
-        Assert.Equal("wss://relay.example.com/v1/c/token/t/324688170/ws", configuration.WebSocketUrl.AbsoluteUri);
+        Assert.Equal("324688170", store.Saved);
+        Assert.Equal("wss://relay.example.com/ws/324688170", configuration.WebSocketUrl.AbsoluteUri);
     }
 
     private sealed class Store : IRelayConfigurationStore
     {
-        public (Uri BaseUrl, string TerminalSerial)? Saved { get; set; }
-        public Task<(Uri BaseUrl, string TerminalSerial)?> GetAsync() => Task.FromResult(Saved);
-        public Task SetAsync(Uri baseUrl, string terminalSerial) { Saved = (baseUrl, terminalSerial); return Task.CompletedTask; }
+        public string? Saved { get; set; }
+        public Task<string?> GetAsync() => Task.FromResult(Saved);
+        public Task SetAsync(string terminalSerial) { Saved = terminalSerial; return Task.CompletedTask; }
     }
 }
