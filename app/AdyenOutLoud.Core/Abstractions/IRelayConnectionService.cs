@@ -2,42 +2,24 @@ using AdyenOutLoud.Models;
 
 namespace AdyenOutLoud.Abstractions;
 
-/// <summary>
-/// Service for managing the persistent WebSocket connection to the relay and payment announcements.
-/// </summary>
+/// <summary>Service managing the relay WebSocket connection and payment announcements.</summary>
 public interface IRelayConnectionService
 {
-    /// <summary>
-    /// Event raised when the connection status changes.
-    /// </summary>
+    /// <summary>Raised when the connection status changes.</summary>
     event EventHandler<RelayStatus>? StatusChanged;
-
-    /// <summary>
-    /// Event raised for diagnostic/logging messages from the connection.
-    /// </summary>
+    /// <summary>Raised with diagnostic messages for the user.</summary>
     event EventHandler<string>? Diagnostic;
-
-    /// <summary>
-    /// Event raised when a payment announcement completes (successfully or not).
-    /// </summary>
+    /// <summary>Raised when a payment announcement completes, played or not.</summary>
     event EventHandler<AnnouncementResult>? AnnouncementCompleted;
 
-    /// <summary>
-    /// Announces a successful payment by playing the pre-recorded clip.
-    /// </summary>
-    /// <param name="message">The payment message to announce.</param>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
-    /// <returns>The result of the announcement attempt.</returns>
-    Task<AnnouncementResult> AnnounceAsync(PaymentMessage message, CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Starts the relay connection (or restarts if already running).
-    /// </summary>
+    /// <summary>Announces a payment unless it was already announced.</summary>
+    /// <param name="message">The payment to announce.</param>
+    /// <param name="ct">Cancels the announcement.</param>
+    /// <returns>What happened.</returns>
+    Task<AnnouncementResult> AnnounceAsync(PaymentMessage message, CancellationToken ct);
+    /// <summary>Starts listening, unless already running.</summary>
     void Start();
-
-    /// <summary>
-    /// Stops the relay connection gracefully.
-    /// </summary>
-    /// <returns>A task representing the asynchronous stop operation.</returns>
+    /// <summary>Stops listening.</summary>
+    /// <returns>A task that completes once stopped.</returns>
     Task StopAsync();
 }

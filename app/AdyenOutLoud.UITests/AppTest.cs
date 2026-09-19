@@ -1,3 +1,5 @@
+using AdyenOutLoud.TestSupport;
+
 namespace AdyenOutLoud.UITests;
 
 /// <summary>Each test starts from a freshly installed app (and empty keychain), so tests cannot leak state into each other.</summary>
@@ -10,7 +12,9 @@ public abstract class AppTest(UiEnvironment environment) : IAsyncLifetime
     internal const string LatestEvent = "LatestEvent";
     internal const string Diagnostic = "Diagnostic";
     internal const string SerialField = "Terminal serial number";
-    internal const string SaveButton = "Save the terminal serial number and language";
+    internal const string FirstReceiptField = "First receipt code";
+    internal const string SecondReceiptField = "Second receipt code";
+    internal const string PairButton = "Pair this device with the terminal";
     internal const string LanguagePicker = "Announcement language";
     internal const string TestVoiceButton = "Play a test announcement in the selected language";
     internal const string NoEventYet = "No payment event received yet.";
@@ -38,11 +42,24 @@ public abstract class AppTest(UiEnvironment environment) : IAsyncLifetime
         }
     }
 
-    /// <summary>Fills in the terminal serial and taps Save. The keyboard is dismissed first so it cannot cover the button.</summary>
-    protected async Task SaveConfigurationAsync(string terminalSerial)
+    /// <summary>
+    /// Pairs the way a merchant would: two approved payments on the terminal, then its serial and the last 4 characters
+    /// of each receipt's PSP reference, then Pair. The keyboard is dismissed first so it cannot cover the button.
+    /// </summary>
+    protected async Task PairAsync(string terminalSerial)
+    {
+        string[] receipts = [Webhooks.NextPsp(), Webhooks.NextPsp()];
+        foreach (var psp in receipts) await Environment.PostWebhookAsync(Webhooks.Approved(psp, terminalSerial));
+        await EnterPairingAsync(terminalSerial, receipts[0][^4..], receipts[1][^4..]);
+    }
+
+    /// <summary>Fills in the pairing form and taps Pair.</summary>
+    protected async Task EnterPairingAsync(string terminalSerial, string firstCode, string secondCode)
     {
         await App.TypeAsync(SerialField, terminalSerial, pressReturn: true);
-        await App.TapAsync(SaveButton);
+        await App.TypeAsync(FirstReceiptField, firstCode, pressReturn: true);
+        await App.TypeAsync(SecondReceiptField, secondCode, pressReturn: true);
+        await App.TapAsync(PairButton);
     }
 
     /// <summary>Waits for a payment to appear under Latest event; on failure the message includes the app's connection state.</summary>

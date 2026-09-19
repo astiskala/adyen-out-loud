@@ -117,6 +117,35 @@ public sealed class PaymentRelayE2ETests(LocalWorker worker)
     }
 
     [Fact]
+    public async Task ADeviceThatWasNeverPairedCannotListen()
+    {
+        await using var app = await ListeningApp.StartUnpairedAsync(worker, Terminal, "forged-token");
+
+        Assert.Contains(app.Statuses, status => status.State == RelayConnectionState.NeedsAttention && status.Detail.Contains("Pair it", StringComparison.Ordinal));
+        Assert.DoesNotContain(app.Statuses, status => status.State == RelayConnectionState.Listening);
+    }
+
+    [Fact]
+    public async Task ReceiptsFromAnotherTerminalDoNotPairThisOne()
+    {
+        string[] receipts = [Webhooks.NextPsp(), Webhooks.NextPsp()];
+        foreach (var psp in receipts) await worker.PostWebhookAsync(Webhooks.Approved(psp, "111111111"));
+        var configuration = new AdyenOutLoud.Services.RelayConfigurationService(
+            new NullStore(), new Uri($"https://{worker.BaseUri.Authority}"), ListeningApp.RelayHttpClient());
+
+        var error = await Assert.ThrowsAsync<RelayPairingException>(() =>
+            configuration.PairAsync(Terminal, [.. receipts.Select(psp => psp[^4..])]));
+
+        Assert.Contains("don't match", error.Message, StringComparison.Ordinal);
+    }
+
+    private sealed class NullStore : AdyenOutLoud.Abstractions.IRelayConfigurationStore
+    {
+        public Task<RelayPairing?> GetAsync() => Task.FromResult<RelayPairing?>(null);
+        public Task SetAsync(RelayPairing pairing) => Task.CompletedTask;
+    }
+
+    [Fact]
     public async Task TheWorkerRejectsBadRequestsWithoutAnnouncingAnything()
     {
         await using var app = await ListeningApp.StartAsync(worker, Terminal);

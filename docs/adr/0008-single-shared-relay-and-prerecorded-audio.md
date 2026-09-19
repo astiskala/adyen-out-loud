@@ -2,6 +2,7 @@
 
 ## Status
 Accepted. It replaced per-company relay URLs with secret tokens and on-device text-to-speech.
+Listening without authentication was superseded by [ADR 0009](0009-pair-devices-with-receipt-codes.md).
 
 ## Context
 Per-company URLs meant generating a secret, configuring it in Adyen, and handing it to every installer

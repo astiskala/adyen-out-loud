@@ -19,6 +19,7 @@ internal sealed class ListeningApp : IAsyncDisposable
     private readonly object _sync = new();
     private readonly List<RelayStatus> _statuses = [];
     private readonly List<AnnouncementResult> _announcements = [];
+    private readonly List<string> _diagnostics = [];
 
     private ListeningApp(RelayConnectionService relay, RecordingPlayer player)
     {
@@ -26,6 +27,7 @@ internal sealed class ListeningApp : IAsyncDisposable
         _player = player;
         _relay.StatusChanged += (_, status) => { lock (_sync) { _statuses.Add(status); } };
         _relay.AnnouncementCompleted += (_, result) => { lock (_sync) { _announcements.Add(result); } };
+        _relay.Diagnostic += (_, message) => { lock (_sync) { _diagnostics.Add(message); } };
     }
 
     public IReadOnlyList<(AnnouncementSound Sound, AppLanguage Language)> Played => _player.Snapshot();
@@ -35,21 +37,51 @@ internal sealed class ListeningApp : IAsyncDisposable
         get { lock (_sync) { return [.. _announcements]; } }
     }
 
+    /// <summary>Pairs the way a merchant would (two approved payments, then both receipt codes) and starts listening.</summary>
     public static async Task<ListeningApp> StartAsync(LocalWorker worker, string terminalSerial, AppLanguage? language = null)
     {
-        var settings = new InMemorySettings { SelectedLanguage = language ?? AppLanguage.English };
-        // Production requires an https relay URL; the local Worker speaks plain http, so the connection
-        // factory maps wss -> ws. The URL, path and terminal-serial handling are the real ones.
-        var configuration = new RelayConfigurationService(new InMemoryConfigurationStore(), new Uri($"https://{worker.BaseUri.Authority}"));
-        await configuration.SaveAsync(terminalSerial);
+        var app = Create(worker, terminalSerial, language, out var configuration);
+        string[] receipts = [Webhooks.NextPsp(), Webhooks.NextPsp()];
+        foreach (var psp in receipts) await worker.PostWebhookAsync(Webhooks.Approved(psp, terminalSerial));
+        await configuration.PairAsync(terminalSerial, [.. receipts.Select(psp => psp[^4..])]);
 
-        var player = new RecordingPlayer();
-        var app = new ListeningApp(
-            new RelayConnectionService(configuration, new LocalConnectionFactory(), settings, player),
-            player);
         app._relay.Start();
         await app.WaitForStateAsync(RelayConnectionState.Listening);
         return app;
+    }
+
+    /// <summary>Starts listening with a stored pairing the relay never issued.</summary>
+    public static async Task<ListeningApp> StartUnpairedAsync(LocalWorker worker, string terminalSerial, string forgedToken)
+    {
+        var app = Create(worker, terminalSerial, null, out _, new InMemoryConfigurationStore(new(terminalSerial, forgedToken)));
+        app._relay.Start();
+        await app.WaitForStateAsync(RelayConnectionState.NeedsAttention);
+        return app;
+    }
+
+    public IReadOnlyList<RelayStatus> Statuses
+    {
+        get { lock (_sync) { return [.. _statuses]; } }
+    }
+
+    /// <summary>An HTTP client for the relay's pairing endpoint that maps the app's https URL onto the local http Worker.</summary>
+    public static HttpClient RelayHttpClient() => new(new PlainHttpHandler());
+
+    private static ListeningApp Create(LocalWorker worker, string terminalSerial, AppLanguage? language, out RelayConfigurationService configuration, InMemoryConfigurationStore? store = null)
+    {
+        var settings = new InMemorySettings { SelectedLanguage = language ?? AppLanguage.English };
+        // Production requires an https relay URL; the local Worker speaks plain http, so the connection
+        // factory maps wss -> ws and the HTTP handler maps https -> http. The URLs, paths, pairing and
+        // terminal-serial handling are the real ones.
+        configuration = new RelayConfigurationService(
+            store ?? new InMemoryConfigurationStore(),
+            new Uri($"https://{worker.BaseUri.Authority}"),
+            RelayHttpClient());
+
+        var player = new RecordingPlayer();
+        return new ListeningApp(
+            new RelayConnectionService(configuration, new LocalConnectionFactory(), settings, player),
+            player);
     }
 
     public async Task StopAsync() => await _relay.StopAsync();
@@ -65,16 +97,21 @@ internal sealed class ListeningApp : IAsyncDisposable
     public async Task WaitForPlayedAsync(int count, TimeSpan? timeout = null)
     {
         await PollAsync(() => _player.Snapshot().Count >= count, timeout ?? DefaultTimeout,
-            () => $"Expected {count} announcement(s) played but heard {_player.Snapshot().Count}.");
+            () => $"Expected {count} announcement(s) played but heard {_player.Snapshot().Count}. {History}");
     }
 
     public async Task WaitForAnnouncementsAsync(int count, TimeSpan? timeout = null)
     {
         await PollAsync(() => Announcements.Count >= count, timeout ?? DefaultTimeout,
-            () => $"Expected {count} completed announcement(s) but saw {Announcements.Count}.");
+            () => $"Expected {count} completed announcement(s) but saw {Announcements.Count}. {History}");
     }
 
     public async ValueTask DisposeAsync() => await _relay.DisposeAsync();
+
+    private string History
+    {
+        get { lock (_sync) { return $"Statuses: {string.Join(" | ", _statuses.Select(s => $"{s.State}: {s.Detail}"))}. Diagnostics: {string.Join(" | ", _diagnostics)}"; } }
+    }
 
     private int StatusCount
     {
@@ -127,16 +164,27 @@ internal sealed class ListeningApp : IAsyncDisposable
         }
     }
 
-    private sealed class InMemoryConfigurationStore : IRelayConfigurationStore
+    private sealed class InMemoryConfigurationStore(RelayPairing? value = null) : IRelayConfigurationStore
     {
-        private string? _value;
+        private RelayPairing? _value = value;
 
-        public Task<string?> GetAsync() => Task.FromResult(_value);
+        public Task<RelayPairing?> GetAsync() => Task.FromResult(_value);
 
-        public Task SetAsync(string terminalSerial)
+        public Task SetAsync(RelayPairing pairing)
         {
-            _value = terminalSerial;
+            _value = pairing;
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class PlainHttpHandler : DelegatingHandler
+    {
+        public PlainHttpHandler() : base(new HttpClientHandler()) { }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            request.RequestUri = new UriBuilder(request.RequestUri!) { Scheme = "http", Port = request.RequestUri!.Port }.Uri;
+            return base.SendAsync(request, cancellationToken);
         }
     }
 
@@ -151,8 +199,16 @@ internal sealed class ListeningApp : IAsyncDisposable
         private const int MaxMessageBytes = 64 * 1024;
         private readonly ClientWebSocket _socket = new();
 
-        public Task ConnectAsync(Uri uri, CancellationToken cancellationToken) =>
-            _socket.ConnectAsync(new UriBuilder(uri) { Scheme = "ws" }.Uri, cancellationToken);
+        public async Task ConnectAsync(Uri uri, string accessToken, CancellationToken cancellationToken)
+        {
+            _socket.Options.CollectHttpResponseDetails = true;
+            _socket.Options.SetRequestHeader("Authorization", $"Bearer {accessToken}");
+            try { await _socket.ConnectAsync(new UriBuilder(uri) { Scheme = "ws" }.Uri, cancellationToken); }
+            catch (WebSocketException ex) when (_socket.HttpStatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                throw new RelayUnauthorizedException("The relay did not accept this device's pairing.", ex);
+            }
+        }
 
         public async Task<string?> ReceiveAsync(CancellationToken cancellationToken)
         {

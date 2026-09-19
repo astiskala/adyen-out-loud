@@ -2,23 +2,22 @@ using AdyenOutLoud.Models;
 
 namespace AdyenOutLoud.Abstractions;
 
-/// <summary>
-/// Service for managing relay configuration (retrieve and save).
-/// </summary>
+/// <summary>Pairs this device with a terminal and provides the resulting relay configuration.</summary>
 public interface IRelayConfigurationService
 {
-    /// <summary>
-    /// Gets the saved relay configuration, if any.
-    /// </summary>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
-    /// <returns>The relay configuration, or null if not configured.</returns>
-    Task<RelayConfiguration?> GetAsync(CancellationToken cancellationToken = default);
+    /// <summary>The saved configuration, or null if this device has not been paired.</summary>
+    /// <param name="ct">Cancels the read.</param>
+    /// <returns>The configuration, if any.</returns>
+    Task<RelayConfiguration?> GetAsync(CancellationToken ct = default);
 
     /// <summary>
-    /// Saves the terminal serial number and returns the resulting relay configuration.
+    /// Pairs this device with a terminal by quoting the last characters of the PSP reference on recent receipts,
+    /// then saves the configuration.
     /// </summary>
-    /// <param name="terminalSerial">The terminal serial number this app is configured for.</param>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
-    /// <returns>The saved relay configuration with computed WebSocket URL.</returns>
-    Task<RelayConfiguration> SaveAsync(string terminalSerial, CancellationToken cancellationToken = default);
+    /// <param name="terminalSerial">The terminal serial number.</param>
+    /// <param name="receiptCodes">The last 4 characters of the PSP reference on each of two recent receipts.</param>
+    /// <param name="ct">Cancels the request.</param>
+    /// <returns>The new configuration.</returns>
+    /// <exception cref="RelayPairingException">The input is invalid or the relay refused to pair.</exception>
+    Task<RelayConfiguration> PairAsync(string terminalSerial, IReadOnlyList<string> receiptCodes, CancellationToken ct = default);
 }

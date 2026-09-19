@@ -1,68 +1,65 @@
 const DNS_QUERY_URL = "https://cloudflare-dns.com/dns-query";
 const RECORD_TYPES = ["A", "AAAA"] as const;
-const MIN_CACHE_MS = 60_000;
-const MAX_CACHE_MS = 300_000;
+const MIN_TTL = 60_000;
+const MAX_TTL = 300_000;
 
-interface DnsAnswer {
+interface DnsAns {
   type: number;
   TTL: number;
   data: string;
 }
-
-interface DnsResponse {
+interface DnsRes {
   Status: number;
-  Answer?: DnsAnswer[];
+  Answer?: DnsAns[];
+}
+interface Cache {
+  addrs: Set<string>;
+  exp: number;
 }
 
-interface CachedAddresses {
-  addresses: Set<string>;
-  expiresAt: number;
-}
+let cache: Cache | undefined;
+let pending: Promise<Cache> | undefined;
 
-let cache: CachedAddresses | undefined;
-let pending: Promise<CachedAddresses> | undefined;
-
-async function query(hostname: string, type: (typeof RECORD_TYPES)[number]): Promise<DnsAnswer[]> {
-  const response = await fetch(`${DNS_QUERY_URL}?name=${encodeURIComponent(hostname)}&type=${type}`, {
+async function query(host: string, type: string): Promise<DnsAns[]> {
+  const res = await fetch(`${DNS_QUERY_URL}?name=${encodeURIComponent(host)}&type=${type}`, {
     headers: { accept: "application/dns-json" },
   });
-  if (!response.ok) throw new Error(`DNS lookup failed with ${response.status}`);
-  const body = await response.json<DnsResponse>();
-  if (body.Status !== 0) throw new Error(`DNS lookup failed with status ${body.Status}`);
-  const wanted = type === "A" ? 1 : 28;
-  return (body.Answer ?? []).filter((answer) => answer.type === wanted);
+  if (!res.ok) throw new Error(`DNS ${res.status}`);
+  const b = await res.json<DnsRes>();
+  if (b.Status !== 0) throw new Error(`DNS status ${b.Status}`);
+  const want = type === "A" ? 1 : 28;
+  return (b.Answer ?? []).filter((a) => a.type === want);
 }
 
-async function lookup(hostname: string): Promise<CachedAddresses> {
-  const answers = (await Promise.all(RECORD_TYPES.map((type) => query(hostname, type)))).flat();
-  if (answers.length === 0) throw new Error("DNS lookup returned no addresses");
-  const ttlMs = Math.min(...answers.map((answer) => answer.TTL)) * 1000;
+async function lookup(host: string): Promise<Cache> {
+  const ans = (await Promise.all(RECORD_TYPES.map((t) => query(host, t)))).flat();
+  if (!ans.length) throw new Error("DNS empty");
+  const ttl = Math.min(...ans.map((a) => a.TTL)) * 1000;
   return {
-    addresses: new Set(answers.map((answer) => answer.data.toLowerCase())),
-    expiresAt: Date.now() + Math.min(Math.max(ttlMs, MIN_CACHE_MS), MAX_CACHE_MS),
+    addrs: new Set(ans.map((a) => a.data.toLowerCase())),
+    exp: Date.now() + Math.min(Math.max(ttl, MIN_TTL), MAX_TTL),
   };
 }
 
-async function addressesOf(hostname: string): Promise<Set<string>> {
-  if (cache && cache.expiresAt > Date.now()) return cache.addresses;
-  pending ??= lookup(hostname)
-    .then((fresh) => (cache = fresh))
-    .finally(() => {
-      pending = undefined;
-    });
-  return (await pending).addresses;
+async function addrs(host: string): Promise<Set<string>> {
+  if (cache && cache.exp > Date.now()) return cache.addrs;
+  pending ??= lookup(host)
+    .then((f) => (cache = f))
+    .finally(() => (pending = undefined));
+  return (await pending).addrs;
 }
 
 /**
- * Whether `clientIp` (Cloudflare's `CF-Connecting-IP`) is one of the addresses `hostname` currently
- * resolves to. Adyen publishes its webhook sender addresses as the DNS records of `out.adyen.com`
- * and may change them, so they are resolved over DNS-over-HTTPS and cached briefly per isolate.
- * Rejects if the lookup fails, so callers can fail closed.
- * @param {string} hostname - Host whose DNS records are the allowed addresses.
- * @param {string | null} clientIp - The connecting client address, or null when unknown.
- * @returns {Promise<boolean>} True when the client address is one of the host's addresses.
+ * Checks if client IP matches Adyen's DNS-published webhook sender IPs.
+ * @param {string} hostname - The host whose A/AAAA records list the allowed senders.
+ * @param {string | null} clientIp - The caller's address (CF-Connecting-IP).
+ * @returns {Promise<boolean>} True if the address is one of the host's.
  */
-export async function isWebhookSource(hostname: string, clientIp: string | null): Promise<boolean> {
-  const addresses = await addressesOf(hostname);
-  return clientIp !== null && addresses.has(clientIp.toLowerCase());
+export async function isWebhookSource(
+  /** Host whose DNS records are the allowed addresses. */
+  hostname: string,
+  /** The connecting client address, or null when unknown. */
+  clientIp: string | null,
+): Promise</** True when the client address is one of the host's addresses. */ boolean> {
+  return clientIp !== null && (await addrs(hostname)).has(clientIp.toLowerCase());
 }

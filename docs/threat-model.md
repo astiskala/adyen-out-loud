@@ -1,7 +1,32 @@
 # Threat model
 
-**There is no authentication.** The relay is one shared public URL and the terminal serial is the
-only routing key. It isn't secret, so anyone who knows it can open a WebSocket for that terminal.
+The relay is one shared public URL, and the terminal serial (which isn't secret) routes each
+notification. A device can only listen after **pairing** with the terminal, which proves it can see
+the terminal's receipts ([ADR 0009](adr/0009-pair-devices-with-receipt-codes.md)).
+
+## Pairing
+
+1. The Worker remembers, per terminal, the last 4 characters of the PSP reference of each approved
+   payment from the last 15 minutes (at most 20). An alarm deletes them once they expire.
+2. `POST /pair/<serial>` with `{"receipts":["AB12","CD34"]}` must quote two *different* recent
+   payments on that terminal. Two are required because every customer holds one receipt, and the
+   serial is printed on the terminal.
+3. On a match the Worker returns a random 256-bit token, stores only its SHA-256 hash (the 10 most
+   recent devices per terminal), and marks both receipts as used.
+4. `GET /ws/<serial>` requires `Authorization: Bearer <token>`; otherwise it returns `401` and the app
+   asks to be paired again.
+
+A terminal allows 10 failed attempts per 15 minutes (then `429`). With two alphanumeric codes, a blind
+guess matches roughly once in 10⁹ tries; legacy all-digit PSP references would make that about 1 in 10⁵.
+
+Remaining gaps:
+
+- Anyone holding two recent receipts from the same terminal (staff, or a customer who paid twice) can
+  pair within the window.
+- Someone who knows a serial can use up its failed attempts and block pairing for 15 minutes. It
+  doesn't affect devices that are already paired.
+- A leaked token keeps working until 10 newer devices pair with that terminal. There is no per-device
+  revocation.
 
 ## Webhook source check
 
@@ -25,19 +50,19 @@ Remaining gaps:
 ## What that means
 
 - Fake announcements can't be posted directly, so a known serial doesn't let anyone trigger one.
-- Anyone who knows a serial can listen to that terminal's real payment metadata (terminal ID,
-  transaction ID, PSP reference, timestamp) while they are connected.
-- **Don't treat an announcement as proof of payment.** The worst case is metadata disclosure or a
-  wrong announcement; the project never touches money. That trade-off is deliberate
-  ([ADR 0008](adr/0008-single-shared-relay-and-prerecorded-audio.md)). For stronger guarantees, add
-  account-level routing first.
+- Knowing a serial isn't enough to listen; see the gaps under [Pairing](#pairing).
+- An announcement confirms that *a* payment was approved on the terminal, not which one; check the
+  terminal or receipt for the amount. The project never touches money.
 
 ## Data
 
 - **In transit:** the metadata above, over HTTPS/WSS only (the app rejects non-`https` relay URLs and
   never disables certificate validation). No card data, amount, or payment method is ever received.
-- **At rest:** nothing on the server, and Worker logs contain no payloads. The device keeps only the
-  terminal serial, the language, and about 40 recent event IDs to avoid announcing a payment twice.
+- **At rest:** per terminal, the last 4 characters and time of up to 20 approved PSP references from the
+  last 15 minutes, a failed-attempt counter, and SHA-256 hashes of up to 10 device tokens. Worker logs
+  contain no payloads. The device keeps the terminal serial, its token (in app-private `Preferences`,
+  excluded from Android backups), the language, and about 40 recent event IDs to avoid announcing a
+  payment twice.
 - **Third parties:** Cloudflare hosts the relay; no analytics or other services are used.
 
 ## Other risks

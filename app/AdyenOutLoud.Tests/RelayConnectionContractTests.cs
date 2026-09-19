@@ -21,6 +21,24 @@ public sealed class RelayConnectionContractTests
         await service.StopAsync();
 
         Assert.Equal("wss://relay.example.com/ws/324688170", connection.ConnectedUri!.AbsoluteUri);
+        Assert.Equal("device-token", connection.ConnectedToken);
+    }
+
+    [Fact]
+    public async Task ARefusedTokenAsksForPairingAgainInsteadOfRetrying()
+    {
+        var statuses = new List<RelayStatus>();
+        var factory = new Factory(new Connection(), new Connection(Envelope));
+        var service = new RelayConnectionService(new Configuration(), factory, new Announcement(), new Player());
+        service.StatusChanged += (_, status) => statuses.Add(status);
+        factory.FailConnectWith = new RelayUnauthorizedException();
+
+        service.Start();
+        await Task.Delay(50);
+        await service.StopAsync();
+
+        Assert.Equal(1, factory.Created);
+        Assert.Contains(statuses, s => s.State == RelayConnectionState.NeedsAttention && s.Detail.Contains("Pair it", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -77,19 +95,19 @@ public sealed class RelayConnectionContractTests
     }
 
     [Fact]
-    public async Task UnconfiguredRelayReportsNeedsAttentionAndStopsWithoutConnecting()
+    public async Task AnUnpairedDeviceIsAskedToPairAndDoesNotConnect()
     {
-        var statuses = new List<RelayConnectionState>();
+        var statuses = new List<RelayStatus>();
         var factory = new Factory();
         var service = new RelayConnectionService(new UnconfiguredConfiguration(), factory, new Announcement(), new Player());
-        service.StatusChanged += (_, status) => statuses.Add(status.State);
+        service.StatusChanged += (_, status) => statuses.Add(status);
 
         service.Start();
         await Task.Delay(50);
         await service.StopAsync();
 
         Assert.Equal(0, factory.Created);
-        Assert.Contains(RelayConnectionState.NeedsAttention, statuses);
+        Assert.Contains(statuses, s => s.State == RelayConnectionState.NeedsAttention && s.Detail.Contains("terminal serial number", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -153,15 +171,15 @@ public sealed class RelayConnectionContractTests
     private sealed class Configuration : IRelayConfigurationService
     {
         public Task<RelayConfiguration?> GetAsync(CancellationToken cancellationToken = default) => Task.FromResult<RelayConfiguration?>(
-            new("324688170", new("wss://relay.example.com/ws/324688170")));
-        public Task<RelayConfiguration> SaveAsync(string terminalSerial, CancellationToken cancellationToken = default) =>
+            new("324688170", new("wss://relay.example.com/ws/324688170"), "device-token"));
+        public Task<RelayConfiguration> PairAsync(string terminalSerial, IReadOnlyList<string> receiptCodes, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException("Not exercised by these tests.");
     }
 
     private sealed class UnconfiguredConfiguration : IRelayConfigurationService
     {
         public Task<RelayConfiguration?> GetAsync(CancellationToken cancellationToken = default) => Task.FromResult<RelayConfiguration?>(null);
-        public Task<RelayConfiguration> SaveAsync(string terminalSerial, CancellationToken cancellationToken = default) =>
+        public Task<RelayConfiguration> PairAsync(string terminalSerial, IReadOnlyList<string> receiptCodes, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException("Not exercised by these tests.");
     }
 
@@ -169,7 +187,7 @@ public sealed class RelayConnectionContractTests
     {
         public Task<RelayConfiguration?> GetAsync(CancellationToken cancellationToken = default) =>
             Task.FromException<RelayConfiguration?>(new InvalidOperationException("configuration store unavailable"));
-        public Task<RelayConfiguration> SaveAsync(string terminalSerial, CancellationToken cancellationToken = default) =>
+        public Task<RelayConfiguration> PairAsync(string terminalSerial, IReadOnlyList<string> receiptCodes, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException("Not exercised by these tests.");
     }
 
@@ -191,8 +209,16 @@ public sealed class RelayConnectionContractTests
     {
         private readonly Queue<object> _receives = new(receives);
         public Uri? ConnectedUri { get; private set; }
+        public string? ConnectedToken { get; private set; }
         public TaskCompletionSource MessageReceived { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        public Task ConnectAsync(Uri uri, CancellationToken cancellationToken) { ConnectedUri = uri; return Task.CompletedTask; }
+        public Exception? FailConnectWith { get; set; }
+        public Task ConnectAsync(Uri uri, string accessToken, CancellationToken cancellationToken)
+        {
+            if (FailConnectWith is not null) return Task.FromException(FailConnectWith);
+            ConnectedUri = uri;
+            ConnectedToken = accessToken;
+            return Task.CompletedTask;
+        }
         public async Task<string?> ReceiveAsync(CancellationToken cancellationToken)
         {
             if (_receives.TryDequeue(out var value))
@@ -213,6 +239,13 @@ public sealed class RelayConnectionContractTests
     {
         private readonly Queue<Connection> _connections = new(connections);
         public int Created { get; private set; }
-        public IRelayConnection Create() { Created++; return _connections.Dequeue(); }
+        public Exception? FailConnectWith { get; set; }
+        public IRelayConnection Create()
+        {
+            Created++;
+            var connection = _connections.Dequeue();
+            connection.FailConnectWith = FailConnectWith;
+            return connection;
+        }
     }
 }

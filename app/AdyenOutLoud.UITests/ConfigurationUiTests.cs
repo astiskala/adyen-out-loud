@@ -16,19 +16,28 @@ public sealed class ConfigurationUiTests(UiEnvironment environment) : AppTest(en
     }
 
     [Fact]
-    public async Task SavingWithoutASerialNumberExplainsWhatIsMissing()
+    public async Task PairingWithoutASerialNumberExplainsWhatIsMissing()
     {
-        await App.TapAsync(SaveButton);
+        await App.TapAsync(PairButton);
 
         await App.WaitForLabelAsync(ConfigurationStatus, text => text.Contains("terminal serial number", StringComparison.OrdinalIgnoreCase), "a missing-serial message");
         Assert.Equal("NEEDS ATTENTION", await App.LabelAsync(StatusTitle));
     }
 
     [Fact]
-    public async Task ASavedConfigurationIsRestoredAfterRelaunch()
+    public async Task CodesThatMatchNoRecentPaymentAreRefused()
     {
-        await SaveConfigurationAsync("555000111");
-        await App.WaitForLabelAsync(ConfigurationStatus, text => text.StartsWith("Saved", StringComparison.Ordinal), "the save confirmation");
+        await EnterPairingAsync("555000111", "ZZZ1", "ZZZ2");
+
+        await App.WaitForLabelAsync(ConfigurationStatus, text => text.Contains("don't match", StringComparison.Ordinal), "a codes-don't-match message");
+        Assert.Equal("NEEDS ATTENTION", await App.LabelAsync(StatusTitle));
+    }
+
+    [Fact]
+    public async Task APairingIsRestoredAfterRelaunch()
+    {
+        await PairAsync("555000111");
+        await App.WaitForLabelAsync(StatusTitle, title => title == "LISTENING", "the paired app to connect", TimeSpan.FromSeconds(40));
 
         await RelaunchAppAsync();
 
@@ -44,8 +53,6 @@ public sealed class ConfigurationUiTests(UiEnvironment environment) : AppTest(en
     {
         await ChooseLanguageAsync(displayName);
         Assert.Equal(displayName, await App.ValueAsync(LanguagePicker));
-        await SaveConfigurationAsync("555000111");
-        await App.WaitForLabelAsync(ConfigurationStatus, text => text.StartsWith("Saved", StringComparison.Ordinal), "the save confirmation");
 
         await RelaunchAppAsync();
         await App.FindAsync(LanguagePicker);

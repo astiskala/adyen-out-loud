@@ -1,10 +1,11 @@
 import { env } from "cloudflare:workers";
-import { reset } from "cloudflare:test";
+import { reset, runDurableObjectAlarm } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parseDisplayNotification } from "../src/adyen/display-parser";
 import type { OutboundEnvelope } from "../src/adyen/models";
 import worker from "../src/index";
-import { MAX_BODY_BYTES, RELAY_OBJECT_NAME } from "../src/ingress-rules";
+import { MAX_BODY_BYTES, MAX_PAIR_BODY_BYTES, RELAY_OBJECT_NAME } from "../src/ingress-rules";
+import { MAX_DEVICES, MAX_FAILED_ATTEMPTS, RECEIPT_WINDOW_MS } from "../src/pairing";
 import approvedDisplay from "./fixtures/display-tender-final-approved.json";
 import declinedDisplay from "./fixtures/display-tender-final-declined.json";
 import unknownValid from "./fixtures/unknown-valid.json";
@@ -74,8 +75,48 @@ function nextMessage(socket: WebSocket): Promise<string> {
   });
 }
 
+let receiptCounter = 0;
+
+/**
+ * Takes an approved payment on the terminal.
+ * @param {string} terminalSerial - The terminal that takes the payment.
+ * @returns {Promise<string>} The code at the end of the receipt's PSP reference.
+ */
+async function takePayment(terminalSerial: string): Promise<string> {
+  const psp = `RCPT${String(++receiptCounter).padStart(12, "0")}`;
+  expect((await post(displayFor(psp, `V400m-${terminalSerial}`))).status).toBe(202);
+  return psp.slice(-4);
+}
+
+async function requestPairing(terminalSerial: string, receipts: unknown): Promise<Response> {
+  return fetchWorker(`/pair/${terminalSerial}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ receipts }),
+  });
+}
+
+/**
+ * Pairs a device the way a merchant would: two payments, then the codes from both receipts.
+ * @param {string} terminalSerial - The terminal to pair with.
+ * @returns {Promise<string>} The device token.
+ */
+async function pairDevice(terminalSerial: string): Promise<string> {
+  const receipts = [await takePayment(terminalSerial), await takePayment(terminalSerial)];
+  const response = await requestPairing(terminalSerial, receipts);
+  expect(response.status).toBe(200);
+  const { token } = await response.json<{ token: string }>();
+  return token;
+}
+
+function openSocket(terminalSerial: string, token?: string): Promise<Response> {
+  return fetchWorker(`/ws/${terminalSerial}`, {
+    headers: { upgrade: "websocket", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+  });
+}
+
 async function connect(terminalSerial: string): Promise<WebSocket> {
-  const response = await fetchWorker(`/ws/${terminalSerial}`, { headers: { upgrade: "websocket" } });
+  const response = await openSocket(terminalSerial, await pairDevice(terminalSerial));
   expect(response.status).toBe(101);
   if (!response.webSocket) throw new Error("Missing WebSocket");
   response.webSocket.accept();
@@ -230,7 +271,7 @@ describe("Display parsing", () => {
 describe("WebSocket relay", () => {
   it("8. delivers a generic payment_succeeded message only to the matching terminal", async () => {
     const matching = await connect("324688170");
-    const other = await connect("someone-elses-terminal");
+    const other = await connect("555000111");
     const otherMessages: string[] = [];
     other.addEventListener("message", (event) => otherMessages.push(String(event.data)));
 
@@ -314,6 +355,118 @@ describe("WebSocket relay", () => {
   });
 });
 
+describe("pairing", () => {
+  const Terminal = "324688170";
+
+  it("issues a token for two recent receipts, and only that token opens the terminal's socket", async () => {
+    const token = await pairDevice(Terminal);
+    expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+
+    const socket = await openSocket(Terminal, token);
+    expect(socket.status).toBe(101);
+    socket.webSocket?.accept();
+    socket.webSocket?.close(1000, "done");
+  });
+
+  it("refuses a socket with no token, an unknown token, or another terminal's token", async () => {
+    const otherToken = await pairDevice("111");
+    for (const response of [
+      await openSocket(Terminal),
+      await openSocket(Terminal, "not-a-real-token"),
+      await openSocket(Terminal, otherToken),
+      await fetchWorker(`/ws/${Terminal}`, { headers: { upgrade: "websocket", authorization: "Basic abc" } }),
+    ]) {
+      expect(response.status).toBe(401);
+      expect(response.headers.get("www-authenticate")).toBe("Bearer");
+    }
+  });
+
+  it("accepts receipt codes in any case and order", async () => {
+    const first = await takePayment(Terminal);
+    const second = await takePayment(Terminal);
+    expect((await requestPairing(Terminal, [second.toLowerCase(), first])).status).toBe(200);
+  });
+
+  it("rejects codes that do not match, belong to another terminal, or repeat one receipt", async () => {
+    const mine = await takePayment(Terminal);
+    const theirs = await takePayment("111");
+    expect((await requestPairing(Terminal, [mine, "ZZZZ"])).status).toBe(403);
+    expect((await requestPairing(Terminal, [mine, theirs])).status).toBe(403);
+    expect((await requestPairing(Terminal, [mine, mine])).status).toBe(403);
+  });
+
+  it("uses each receipt for one pairing only", async () => {
+    const receipts = [await takePayment(Terminal), await takePayment(Terminal)];
+    expect((await requestPairing(Terminal, receipts)).status).toBe(200);
+    expect((await requestPairing(Terminal, receipts)).status).toBe(403);
+  });
+
+  it("does not accept a declined payment's receipt", async () => {
+    expect((await post(declinedDisplay)).status).toBe(202);
+    const approved = await takePayment(Terminal);
+    expect((await requestPairing(Terminal, [approved, "INED"])).status).toBe(403);
+  });
+
+  it("rejects receipts older than the pairing window", async () => {
+    const receipts = [await takePayment(Terminal), await takePayment(Terminal)];
+    vi.useFakeTimers({ toFake: ["Date"], now: Date.now() + RECEIPT_WINDOW_MS + 1 });
+    expect((await requestPairing(Terminal, receipts)).status).toBe(403);
+  });
+
+  it("throttles failed attempts per terminal until the window passes", async () => {
+    for (let i = 0; i < MAX_FAILED_ATTEMPTS; i++)
+      expect((await requestPairing(Terminal, ["AAAA", "BBBB"])).status).toBe(403);
+
+    const receipts = [await takePayment(Terminal), await takePayment(Terminal)];
+    const throttled = await requestPairing(Terminal, receipts);
+    expect(throttled.status).toBe(429);
+    expect(Number(throttled.headers.get("retry-after"))).toBeGreaterThan(0);
+    expect((await pairDevice("111")).length).toBeGreaterThan(0);
+
+    vi.useFakeTimers({ toFake: ["Date"], now: Date.now() + RECEIPT_WINDOW_MS });
+    expect((await requestPairing(Terminal, ["AAAA", "BBBB"])).status).toBe(403);
+  });
+
+  it("keeps the most recent devices and forgets the oldest", async () => {
+    const tokens: string[] = [];
+    for (let i = 0; i <= MAX_DEVICES; i++) tokens.push(await pairDevice(Terminal));
+    expect((await openSocket(Terminal, tokens[0])).status).toBe(401);
+    const newest = await openSocket(Terminal, tokens[MAX_DEVICES]);
+    expect(newest.status).toBe(101);
+    newest.webSocket?.accept();
+    newest.webSocket?.close(1000, "done");
+  });
+
+  it("validates the request before it reaches the relay", async () => {
+    const pair = (init: RequestInit, serial = Terminal) => fetchWorker(`/pair/${serial}`, init);
+    const asJson = { "content-type": "application/json" };
+    expect((await pair({ method: "GET" })).status).toBe(405);
+    expect((await pair({ method: "POST", body: "{}" })).status).toBe(415);
+    expect((await pair({ method: "POST", headers: asJson, body: "{bad" })).status).toBe(400);
+    expect(
+      (await pair({ method: "POST", headers: asJson, body: "x".repeat(MAX_PAIR_BODY_BYTES + 1) })).status,
+    ).toBe(413);
+    expect((await requestPairing(Terminal, ["AB12"])).status).toBe(400);
+    expect((await requestPairing(Terminal, ["AB12", "CD3"])).status).toBe(400);
+    expect((await requestPairing(Terminal, ["AB12", "CD3!"])).status).toBe(400);
+    expect((await requestPairing(Terminal, ["AB12", 1234])).status).toBe(400);
+    expect((await pair({ method: "POST", headers: asJson, body: "{}" }, "bad%20serial")).status).toBe(404);
+  });
+
+  it("prunes expired receipts when the alarm fires", async () => {
+    const stale = [await takePayment(Terminal), await takePayment(Terminal)];
+    vi.useFakeTimers({ toFake: ["Date"], now: Date.now() + RECEIPT_WINDOW_MS / 2 });
+    const fresh = [await takePayment("111"), await takePayment("111")];
+    vi.useFakeTimers({ toFake: ["Date"], now: Date.now() + RECEIPT_WINDOW_MS / 2 + 1 });
+
+    const stub = testEnv.PAYMENT_CHANNELS.get(testEnv.PAYMENT_CHANNELS.idFromName(RELAY_OBJECT_NAME));
+    expect(await runDurableObjectAlarm(stub)).toBe(true);
+
+    expect((await requestPairing(Terminal, stale)).status).toBe(403);
+    expect((await requestPairing("111", fresh)).status).toBe(200);
+  });
+});
+
 describe("Durable Object internal contract", () => {
   function stub(): DurableObjectStub {
     return testEnv.PAYMENT_CHANNELS.get(testEnv.PAYMENT_CHANNELS.idFromName(RELAY_OBJECT_NAME));
@@ -322,6 +475,19 @@ describe("Durable Object internal contract", () => {
   it("returns 404 for an unrecognized internal path", async () => {
     const response = await stub().fetch("https://relay.internal/unknown");
     expect(response.status).toBe(404);
+  });
+
+  it("returns 400 when /ws or /pair is missing the terminal, or /pair has no code list", async () => {
+    expect(
+      (await stub().fetch("https://relay.internal/ws", { headers: { upgrade: "websocket" } })).status,
+    ).toBe(400);
+    expect((await stub().fetch("https://relay.internal/pair", { method: "POST", body: "[]" })).status).toBe(
+      400,
+    );
+    expect(
+      (await stub().fetch("https://relay.internal/pair?terminal=1", { method: "POST", body: '{"a":1}' }))
+        .status,
+    ).toBe(400);
   });
 
   it("returns 426 when /ws is requested without an upgrade header", async () => {

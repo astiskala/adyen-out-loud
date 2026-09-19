@@ -57,11 +57,20 @@ malformed-input test as well as a valid one.
 - `deploy-worker.yml`: on a push to `main` that touches `worker/`, runs the quality gate and
   `wrangler deploy`, then checks `/health`. It needs the `CLOUDFLARE_API_TOKEN` and
   `CLOUDFLARE_ACCOUNT_ID` repository secrets.
+- `release.yml`: on a `v1.2.3` tag, builds an Android APK and a Windows installer `.exe` plus a
+  portable `.zip` (unpackaged, self-contained, via `app/Installer/AdyenOutLoud.iss`) and attaches them
+  to a GitHub release. The tag sets the display version and the run number the build number. Run it
+  by hand to get the same files as workflow artifacts without a release.
 - This set-up guide is served by GitHub Pages from `main` / `docs`.
 
-Deploy by hand with `cd worker && npx wrangler login && npm run deploy`. App releases aren't automated:
-bump `ApplicationDisplayVersion` and `ApplicationVersion` in the app project, build signed packages
-per platform, and tag a GitHub release.
+Deploy the Worker by hand with `cd worker && npx wrangler login && npm run deploy`. To release the app,
+push a tag: `git tag v1.2.3 && git push origin v1.2.3`.
+
+Android updates only install over an APK signed with the same key. Create a keystore once
+(`keytool -genkeypair -v -keystore release.keystore -alias adyenoutloud -keyalg RSA -keysize 2048 -validity 10000`)
+and set the `ANDROID_KEYSTORE_BASE64` (`base64 -i release.keystore`), `ANDROID_KEYSTORE_PASSWORD`,
+`ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD` repository secrets; without them each release is signed
+with a new debug key. Windows builds aren't code-signed, and iOS and Mac Catalyst aren't released.
 
 ## Dependencies
 

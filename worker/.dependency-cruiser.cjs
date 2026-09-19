@@ -24,7 +24,7 @@ module.exports = {
       severity: "error",
       comment:
         "src/adyen/** and src/identity.ts are pure parsing/correlation logic and must run in a plain test host.",
-      from: { path: "^src/(adyen/.+|identity)\\.ts$" },
+      from: { path: "^src/(adyen/.+|pairing)\\.ts$" },
       to: { path: "^(cloudflare:|src/index\\.ts$|src/relay-object\\.ts$)" },
     },
     {

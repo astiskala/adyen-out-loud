@@ -20,6 +20,7 @@ export default defineConfig({
         // general floor. src/index.ts (thin HTTP routing) is exercised by worker.test.ts but excluded
         // from the gate itself — it is almost entirely branches already covered end-to-end.
         "src/adyen/**": { statements: 90, branches: 85, functions: 90, lines: 90 },
+        "src/pairing.ts": { statements: 90, branches: 85, functions: 90, lines: 90 },
         "src/relay-object.ts": { statements: 80, branches: 75, functions: 80, lines: 80 },
       },
     },
