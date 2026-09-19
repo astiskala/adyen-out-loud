@@ -90,7 +90,7 @@ npm run dev              # local Worker dev server (wrangler dev)
 ### Relay configuration
 
 The relay URL is compiled in (`RelayEndpointFactory.DefaultBaseUrl`); only the terminal serial
-number is entered in the app and stored in platform secure storage (see
+number is entered in the app and stored in app preferences (see
 [ADR 0008](adr/0008-single-shared-relay-and-prerecorded-audio.md)). Debug builds of the app honour an
 `ADYEN_OUT_LOUD_RELAY_URL` environment variable to point at another (HTTPS) relay; release builds
 ignore it. `RelayEndpointFactory` rejects anything that isn't an HTTPS address with no query or

@@ -52,7 +52,7 @@ public sealed class MauiSourceBoundaryTests
             "new RelayConfigurationService(",
             "new ClientWebSocketConnection(",
             "new MauiAudioPlayer(",
-            "new SecureStorageRelayConfigurationStore(",
+            "new PreferencesRelayConfigurationStore(",
             "new PreferencesSettingsService(",
         };
 

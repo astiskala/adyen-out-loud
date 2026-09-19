@@ -38,7 +38,7 @@ anywhere else. The device also keeps a small bounded cache of recently-seen even
 (`ISettingsService`, backed by MAUI `Preferences`, capped at 40 entries — see
 [`PreferencesSettingsService`](../app/AdyenOutLoud/Services/PreferencesSettingsService.cs)) purely
 to avoid re-announcing a duplicate; this cache holds event IDs, not payment content. The app also
-stores its configured terminal serial number in platform secure storage — see
+stores its configured terminal serial number in app preferences — see
 [`docs/security.md`](security.md#terminal-serial-handling).
 
 ## Analytics

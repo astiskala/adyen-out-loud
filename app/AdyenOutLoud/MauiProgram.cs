@@ -28,7 +28,7 @@ public static class MauiProgram
 
         builder.Services.AddSingleton<IAnnouncementPlayer, MauiAudioPlayer>();
         builder.Services.AddSingleton<ISettingsService, PreferencesSettingsService>();
-        builder.Services.AddSingleton<IRelayConfigurationStore, SecureStorageRelayConfigurationStore>();
+        builder.Services.AddSingleton<IRelayConfigurationStore, PreferencesRelayConfigurationStore>();
         builder.Services.AddSingleton<IRelayConfigurationService>(provider => new RelayConfigurationService(
             provider.GetRequiredService<IRelayConfigurationStore>(),
             RelayUrl()));

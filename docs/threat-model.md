@@ -54,7 +54,7 @@ by account) before deploying for a merchant that relies on the announcement.
 | **Malformed payloads** | The Display parser fails closed (`worker/test/parsers.test.ts`, [`docs/testing.md`](testing.md)). |
 | **Resource exhaustion** | Request bodies are capped at 64 KiB (`MAX_BODY_BYTES`); the app caps incoming frames at 64 KiB. No per-IP rate limiting at the Worker; use Cloudflare rate limiting if abuse appears. All sockets live in one Durable Object, so a flood of connections affects every user. |
 | **Abuse of the public endpoint** | `/health`, `/webhook`, and `/ws/<serial>` are unauthenticated by design. Cloudflare's platform DDoS protection is the first line of defense. |
-| **Client compromise** | A compromised device has whatever the app has (the terminal serial in OS secure storage). Out of scope. |
+| **Client compromise** | A compromised device has whatever the app has (the terminal serial in app preferences). Out of scope. |
 | **Dependency compromise** | Mitigated by pinning, lockfiles, audits, Dependabot, CodeQL — see [`docs/quality.md`](quality.md) and [`docs/dependencies.md`](dependencies.md). |
 
 ## Transport

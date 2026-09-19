@@ -10,9 +10,10 @@ it.
 - There is no secret token. The only routing key is the terminal serial, validated by shape
   (`^[A-Za-z0-9_-]{1,64}$`, `validTerminalSerial` in `worker/src/index.ts`) and rejected with a generic
   `404` otherwise. It is not a secret (see [`docs/threat-model.md`](threat-model.md)).
-- It is stored on-device in platform secure storage (`SecureStorage` via
-  [`SecureStorageRelayConfigurationStore`](../app/AdyenOutLoud/Services/SecureStorageRelayConfigurationStore.cs))
-  — Keychain on Apple platforms, Keystore-backed on Android, Credential Locker on Windows.
+- It is stored on-device in app preferences (`Preferences` via
+  [`PreferencesRelayConfigurationStore`](../app/AdyenOutLoud/Services/PreferencesRelayConfigurationStore.cs)),
+  not in Keychain-backed `SecureStorage`: it is not a secret, and `SecureStorage` fails with
+  `MissingEntitlement` in unsigned Mac builds.
 
 ## Logging and redaction
 

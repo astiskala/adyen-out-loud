@@ -27,7 +27,7 @@
   <ItemGroup>
     <MauiIcon Include="Resources/AppIcon/appicon.svg" Color="#0B1014" />
     <MauiSplashScreen Include="Resources/Splash/splash.svg" Color="#0B1014" BaseSize="256,256" />
-    <MauiAsset Include="Resources/Raw/*.mp3" />
+    <MauiAsset Include="Resources/Raw/*.mp3" LogicalName="%(Filename)%(Extension)" />
     <MauiXaml Update="**/*.xaml" Generator="MSBuild:Compile" />
   </ItemGroup>
 

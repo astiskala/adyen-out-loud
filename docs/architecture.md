@@ -105,7 +105,7 @@ AdyenOutLoud.Core            (net10.0, no MAUI/platform reference — see ADR 00
 AdyenOutLoud                 (net10.0-android / -ios / -maccatalyst / -windows10.0.19041.0)
     ViewModels/MainViewModel  UI state + commands only, binds to Core abstractions via DI
     Services/                 thin platform adapters: ClientWebSocketConnection, MauiAudioPlayer,
-                               SecureStorageRelayConfigurationStore, PreferencesSettingsService
+                               PreferencesRelayConfigurationStore, PreferencesSettingsService
     Platforms/<X>/            per-platform pieces, including BackgroundExecutionService (below)
                                and, on Android, PaymentListenerForegroundService
     Resources/Raw/*.mp3        pre-recorded announcements (PaymentReceived/TestAnnouncement x EN, ZH, MS, TA)
