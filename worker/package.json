@@ -34,7 +34,7 @@
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-jsdoc": "^64.5.3",
-    "knip": "^6.37.0",
+    "knip": "^6.42.1",
     "prettier": "^3.9.8",
     "typescript": "6.0.3",
     "typescript-eslint": "^8.70.0",
