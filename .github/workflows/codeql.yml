@@ -57,6 +57,6 @@ jobs:
           dotnet build AdyenOutLoud.Tests/AdyenOutLoud.Tests.csproj -c Release
           dotnet build AdyenOutLoud.ArchitectureTests/AdyenOutLoud.ArchitectureTests.csproj -c Release
 
-      - uses: github/codeql-action/analyze@d8073367669608af8fbcc5f63dd0a0d52bb90cff # v4
+      - uses: github/codeql-action/analyze@38112626f97ac1fd7acf3df7ebca51f4677c1b38 # v4
         with:
           category: "/language:${{ matrix.language }}"
